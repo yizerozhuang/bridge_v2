@@ -10,7 +10,7 @@ from model.BD_Process import (messagebox, BD_Rescale_Process, BD_Align_Process,
 
 from utility.pdf_utility import (convert_mm_to_pixel, get_timestamp, get_pdf_page_numbers, get_paper_sizes,
                                  generate_possible_colors,
-                                 get_pdf_page_sizes, open_sketch)
+                                 get_pdf_page_sizes, open_in_bluebeam)
 from utility.sql_function import get_value_from_table, format_output, order_dict
 
 from exception.BD_Message_Box import BD_Info_Message
@@ -107,7 +107,7 @@ class Sketch_Tab(BD_Base_Frame):
 
     def rescale_success(self):
         page_number = get_pdf_page_numbers(self.current_sketch_dir)
-        open_sketch(self.current_sketch_dir)
+        open_in_bluebeam(self.current_sketch_dir)
         self.sketch_align_line_edit_total_page.setText(str(page_number))
         self.sketch_align_line_edit_scale.setText(str(self.rescale_output_scale_radio_button_window.get_selection_value()))
         output_size = self.rescale_output_size_radio_button_window.get_selection_text().split("(")[0]
@@ -180,7 +180,7 @@ class Sketch_Tab(BD_Base_Frame):
         process.start_process()
 
     def process_success(self):
-        open_sketch(self.current_sketch_dir)
+        open_in_bluebeam(self.current_sketch_dir)
         self.ui.toolBox.setCurrentIndex(2)
 
     def markup_tab(self):
@@ -211,7 +211,7 @@ class Sketch_Tab(BD_Base_Frame):
         process.start_process()
 
     def copy_success(self):
-        open_sketch(self.current_sketch_dir)
+        open_in_bluebeam(self.current_sketch_dir)
         self.ui.toolBox.setCurrentIndex(3)
 
     def checklist_tab(self):
@@ -224,7 +224,7 @@ class Sketch_Tab(BD_Base_Frame):
             shutil.move(output_dir, os.path.join(self.app.current_folder_address, "SS",
                                                  f"{get_timestamp()}-{self.app.project_name}-Mechanical Sketch.pdf"))
         os.rename(self.current_sketch_dir, output_dir)
-        open_sketch(output_dir)
+        open_in_bluebeam(output_dir)
         BD_Info_Message("The Sketch procedure is completed")
 
     def on_cell_changed(self):

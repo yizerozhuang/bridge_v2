@@ -11,15 +11,15 @@ import os
 import json
 import ast
 from conf.config_copilot import CONFIGURATION as conf
-from utility.pdf_utility import (init_environment,open_folder,open_link_with_edge,file_exists,combine_pdf,convert_mm_to_pixel,is_float,
-                     flatten_pdf,resize_pdf_multiprocessing,grays_scale_pdf_multiprocessing,align_multiprocessing,
-                     add_tags_multiprocessing,is_pdf_open,create_or_clear_directory,create_directory,
-                     get_number_of_page,find_keyword,extract_first_page,remove_first_page,get_paper_size,svg_set_opacity_multicolor,
-                     markup_wait,lumicolor_pc_wait,setupdrawing_wait,aligncombine_wait,overlay_pc_wait,plot_wait,remove_wait,
-                     pdf_move_center,insert_logo_into_pdf,remove_duplicates_keep_order,version_setter,get_frame_content,getlogo,getpage,
-                     open_sketch,remove_pdf_page,parse_page_ranges,get_file_bytes,compress_directory_to_zip,
-                     adjust_hex_color,f_waitinline,page_delete,get_temp_name,list_all_files,
-                     char2num)
+from utility.pdf_utility import (init_environment, open_folder, open_link_with_edge, file_exists, combine_pdf, convert_mm_to_pixel, is_float,
+                                 flatten_pdf, resize_pdf_multiprocessing, grays_scale_pdf_multiprocessing, align_multiprocessing,
+                                 add_tags_multiprocessing, is_pdf_open, create_or_clear_directory, create_directory,
+                                 get_number_of_page, find_keyword, extract_first_page, remove_first_page, get_paper_size, svg_set_opacity_multicolor,
+                                 markup_wait, lumicolor_pc_wait, setupdrawing_wait, aligncombine_wait, overlay_pc_wait, plot_wait, remove_wait,
+                                 pdf_move_center, insert_logo_into_pdf, remove_duplicates_keep_order, version_setter, get_frame_content, getlogo, getpage,
+                                 open_in_bluebeam, remove_pdf_page, parse_page_ranges, get_file_bytes, compress_directory_to_zip,
+                                 adjust_hex_color, f_waitinline, page_delete, get_temp_name, list_all_files,
+                                 char2num)
 init_environment(conf)
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtCore import Qt,QThread, pyqtSignal, QSize,QEvent,QDate, QLoggingCategory
@@ -163,7 +163,7 @@ class Process(QThread):
             pool.close()
             time.sleep(2)
             flatten_pdf(self.output_file,self.output_file)
-            open_sketch(self.output_file)
+            open_in_bluebeam(self.output_file)
         except:
             traceback.print_exc()
             return
@@ -189,7 +189,7 @@ class Addtag(QThread):
             if self.tag_onoff==True:
                 self.tag()
             self.worker.stop()
-            open_sketch(self.file_dir)
+            open_in_bluebeam(self.file_dir)
         except:
             traceback.print_exc()
             self.worker.stop()
@@ -1557,7 +1557,7 @@ class Stats():
             if selected_items:
                 content = selected_items[0].text()
             file_name = os.path.join(file_dir, content)
-            open_sketch(file_name)
+            open_in_bluebeam(file_name)
         except:
             traceback.print_exc()
     '''Up move file in table'''
@@ -3408,7 +3408,7 @@ class Stats():
             self.ui.text_combine_3_filenameadd.setText('')
             self.ui.text_combine_1_foldername.setText('')
             self.ui.text_combine_op.setText('')
-            open_sketch(combine_pdf_dir)
+            open_in_bluebeam(combine_pdf_dir)
         except:
             traceback.print_exc()
         finally:
@@ -3450,7 +3450,7 @@ class Stats():
                 if grayonoff or tagonoff:
                     time.sleep(1)
                     self.f_sketch_colorprocess_addtags()
-            open_sketch(self.ui.text_align_outfile.text())
+            open_in_bluebeam(self.ui.text_align_outfile.text())
         except:
             traceback.print_exc()
     '''Sketch - File name change'''
@@ -4584,7 +4584,7 @@ class Stats():
     def f_button_open_sketch(self):
         try:
             file_dir=self.ui.text_drawing_sktechdir.text()
-            open_sketch(file_dir)
+            open_in_bluebeam(file_dir)
         except:
             traceback.print_exc()
     '''Drawing - Change sketch dir'''
@@ -4719,7 +4719,7 @@ class Stats():
                 pro_info_str = quo_num + '-' + pro_num + '-' + pro_name
                 if abs(int(file_bytes_new)-int(file_bytes_ori))>10:
                     flatten_pdf(file_to, file_to)
-                    open_sketch(file_to)
+                    open_in_bluebeam(file_to)
                     message(str(file_to) + '\nPlot successfully', self.ui)
                     # message(pro_info_str+'\nPlot successfully',self.ui)
                 else:
@@ -4900,7 +4900,7 @@ class Stats():
                 self.pastelogo = Pastelogo(self.progress_dialog, self.ui.text_logo_dir.text(),output_file,paper_size)
                 self.pastelogo.start()
                 self.progress_dialog.exec_()
-            open_sketch(output_file)
+            open_in_bluebeam(output_file)
         except:
             traceback.print_exc()
         finally:
@@ -4942,7 +4942,7 @@ class Stats():
             self.updateframe = UpdateFrame(self.progress_dialog, pdf_file,last_drawing_page,self.drawingframe_context_list,chk_by,drw_by,issue_type,pro_no,pro_name,new_rev_list_all,scale_a1,scale_b,scale_a2,last_cover_page)
             self.updateframe.start()
             self.progress_dialog.exec_()
-            open_sketch(pdf_file)
+            open_in_bluebeam(pdf_file)
         except:
             traceback.print_exc()
         finally:
@@ -5306,7 +5306,7 @@ class Stats():
                 time.sleep(2)
                 file_bytes_new = get_file_bytes(file_markupto)
                 if abs(int(file_bytes_new)-int(file_bytes_ori))>10:
-                    open_sketch(file_markupto)
+                    open_in_bluebeam(file_markupto)
                 else:
                     message('Copy markup failed',self.ui)
             except:
@@ -5427,11 +5427,11 @@ class Stats():
                 self.overlay_pc.start()
                 self.progress_dialog.exec_()
             try:
-                open_sketch(outputfile)
+                open_in_bluebeam(outputfile)
             except:
                 pass
             try:
-                open_sketch(outputfile2)
+                open_in_bluebeam(outputfile2)
             except:
                 pass
         except:
@@ -5502,7 +5502,7 @@ class Stats():
             self.combine_pro = Combine(self.progress_dialog,combinefile_list_ab, combine_pdf_dir)
             self.combine_pro.start()
             self.progress_dialog.exec_()
-            open_sketch(combine_pdf_dir)
+            open_in_bluebeam(combine_pdf_dir)
         except:
             traceback.print_exc()
         finally:

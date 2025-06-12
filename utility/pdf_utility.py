@@ -41,6 +41,14 @@ def open_folder(dir):
     webbrowser.open(dir)
 
 
+def get_file_name(file_path):
+    return os.path.basename(file_path)
+
+def move_file_to_ss(input_file, ss_folder):
+    os.makedirs(ss_folder, exist_ok=True)
+    if os.path.exists(input_file):
+        shutil.move(input_file, os.path.join(ss_folder, f"{get_timestamp()}-{get_file_name(input_file)}"))
+
 def open_link_with_edge(link):
     edge_address = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
@@ -204,7 +212,7 @@ def getlogo(pdf_path, output_path, paper_size):
     save_image(cropped_img, output_path)
 
 
-def open_sketch(file_dir):
+def open_in_bluebeam(file_dir):
     try:
         _thread.start_new_thread(open_pdf_in_bluebeam, (file_dir, ))
     except:
@@ -766,7 +774,21 @@ def svg_set_opacity_multicolor(input_svg, pre_colors, output_path):
         root.write(f)
 
 
+def pdf_move_center_per_page(pdf_file, paper_size, output_page):
+    if paper_size == 'A3':
+        center_point = [13.91296, 14.40692, 1161.803, 724.2948]
+    elif paper_size == 'A1':
+        center_point = [51.49623, 39.79395, 2270.485, 1476.798]
+    else:
+        center_point = [50.58789, 39.68091, 3257.938, 2177.293]
+    for i in range(1, PDFTools_v2.page_count(pdf_file)+1):
+        markups = PDFTools_v2.return_markup_by_page(pdf_file, i)
+        markups = PDFTools_v2.filter_markup_by(markups, {"subject": "Rectangle", "color": "#7C0000"})
+        assert len(markups) > 0, f"Page {i} don't have any rectangular"
+        assert len(markups) == 1, f"Page {i} have more than one rectangular"
 
+    for i in range(1, PDFTools_v2.page_count(pdf_file) + 1):
+        pass
 def pdf_move_center(pdf_file, paper_size):
     if paper_size == 'A3':
         center_point = [13.91296, 14.40692, 1161.803, 724.2948]
@@ -774,9 +796,12 @@ def pdf_move_center(pdf_file, paper_size):
         center_point = [51.49623, 39.79395, 2270.485, 1476.798]
     else:
         center_point = [50.58789, 39.68091, 3257.938, 2177.293]
+
+
     markups = PDFTools_v2.return_markup_by_page(pdf_file, 1)
-    markups = PDFTools_v2.filter_markup_by(markups, {"color": "#7C0000"})
-    assert len(markups) == 1
+    #retangular
+    markups = PDFTools_v2.filter_markup_by(markups, {"subject":"Rectangle", "color": "#7C0000"})
+    assert len(markups) == 1, "every pages should have only one rectangle"
     markup_rect = list(markups.items())[0]
     coordinate = (float(markup_rect[1]['x']) + float(markup_rect[1]['width']) / 2,
                   float(markup_rect[1]['y']) + float(markup_rect[1]['height']) / 2)
@@ -801,26 +826,28 @@ def pdf_move_center(pdf_file, paper_size):
 
 
 def insert_logo_into_pdf(pdf_path, image_path, page_number, paper_size):
+    #TODO: need to keep the same rotation and make sure the template is no rotation for all
     if paper_size == 'A3':
         rec_x = 665
         rec_y = 16
         rec_width = 95
         rec_height = 75
     elif paper_size == 'A1':
-        rec_x = 965
-        rec_y = 45
-        rec_width = 265
-        rec_height = 115
+        rec_x = 100
+        rec_y = 0
+        rec_width = 100
+        rec_height = 200
     else:
+        #A0
         rec_x = 1265
         rec_y = 45
         rec_width = 595
         rec_height = 110
     img = Image.open(image_path)
     img_width, img_height = img.size
-    img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height)
-    insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=270)
-
+    # img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height)
+    # insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=0)
+    insert_image_into_pdf(pdf_path, image_path, page_number, rec_x, rec_y,rec_width, rec_height, rotation=270)
 
 def remove_duplicates_keep_order(lst):
     seen = set()

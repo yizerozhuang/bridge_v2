@@ -12,9 +12,7 @@ class BD_Clipboard_Frame(BD_Base_Frame):
         self.clipboard.dataChanged.connect(self.on_clipboard_change)
 
     def on_clipboard_change(self):
-        mime_data = self.clipboard.mimeData()
-
-        if mime_data.hasImage():
+        if self.is_image_included():
             image = self.clipboard.image()
             pixmap = QPixmap.fromImage(image)
             self.label.setPixmap(pixmap)
@@ -22,3 +20,11 @@ class BD_Clipboard_Frame(BD_Base_Frame):
         else:
             self.label.setPixmap(QPixmap())  # Clear image
             self.label.setText("")
+
+    def is_image_included(self):
+        return self.clipboard.mimeData().hasImage()
+
+    def save_image(self, file_path):
+        if self.is_image_included():
+            image = self.clipboard.image()
+            image.save(file_path, "PNG")

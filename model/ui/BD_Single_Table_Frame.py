@@ -2,7 +2,7 @@ from model.ui.BD_Base_Frame import BD_Base_Frame
 
 from PyQt5.QtWidgets import QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QFileDialog
 from PyQt5.QtCore import Qt
-from utility.pdf_utility import open_sketch, open_folder
+from utility.pdf_utility import open_in_bluebeam, open_folder
 import os
 
 class BD_Single_Table_Frame(BD_Base_Frame):
@@ -39,7 +39,7 @@ class BD_Single_Table_Frame(BD_Base_Frame):
     def on_double_click(self):
         file_path = self.get_current_item_path()
         if file_path.endswith(".pdf"):
-            open_sketch(file_path)
+            open_in_bluebeam(file_path)
         elif os.path.isdir(file_path):
             open_folder(file_path)
 

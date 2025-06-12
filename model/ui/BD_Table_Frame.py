@@ -89,6 +89,13 @@ class BD_Table_Frame(BD_Base_Frame):
             item = self.table.item(row, 0)
             item.setCheckState(Qt.Unchecked)
 
+    def get_row_values(self, row):
+        result = []
+        for column in range(self.table.columnCount()):
+            item = self.table.item(row, column)
+            result.append(item.text())
+        return result
+
     def get_current_content(self):
         result = []
         if self.include_check_box:

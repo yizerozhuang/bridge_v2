@@ -2,7 +2,8 @@ import sys
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from utility.pdf_utility import (resize_pdf_multiprocessing,align_multiprocessing, grays_scale_pdf_multiprocessing,
-                                 add_tags_multiprocessing, flatten_pdf, open_sketch, get_pdf_page_numbers, luminocity_pdf_multiprocessing)
+                                 add_tags_multiprocessing, flatten_pdf, get_pdf_page_numbers, pdf_move_center, get_number_of_page, combine_pdf,
+                                 insert_logo_into_pdf)
 from utility.pdf_tool import PDFTools
 from PyQt5.QtWidgets import QDialog, QProgressBar, QLabel, QVBoxLayout, QMessageBox
 from PyQt5.QtCore import Qt
@@ -73,10 +74,11 @@ class BD_Process(QThread):
         self.ui=ui
         super().__init__()
         self.progress_dialog = ProgressDialog(info, ui)
+        self.processing_time = 300
 
     def run(self):
         try:
-            self.worker = BD_Worker(300)
+            self.worker = BD_Worker(self.processing_time)
             self.worker.progress.connect(self.progress_dialog.update_progress)
             self.worker.finished.connect(self.progress_dialog.accept)
             self.worker.start()
@@ -255,74 +257,82 @@ class BD_Copy_Markup_Process(BD_Process):
                 'copyornot':[[True]*page_number, [True]*page_number]
             }
             file.write(str(file_names))
+        # Todo: design the waiting function
         while True:
             time.sleep(2)
             if self.is_available():
                 break
 
-# class BD_Align_Greyscale_Process(BD_Process):
-#
-#     markup_dict = {'A4': "Textbox-Size24", 'A3': "Textbox-Size_A3", 'A2': "Textbox-Size_A2",
-#                    'A1': "Textbox-Size_A1", 'A0': "Textbox-Size_A0", 'A0-24': "Textbox-Size_A0_24",
-#                    'A0-26': "Textbox-Size_A0_26", 'custom': "Textbox-Size_A0_26"}
-#     markup_width_dict = {'A4': 14, 'A3': 24, 'A2': 24, 'A1': 40, 'A0': 50, 'A0-24': 72, 'A0-26': 100, 'custom': 100}
-#
-#     def __init__(self, info, ui, current_sketch_dir, selected_floors, luminocity_checked, luminocity_value, grayscale_checked, add_tags_checked,
-#                  output_scale, output_paper_type):
-#         super().__init__(info, ui)
-#         self.current_sketch_dir = current_sketch_dir
-#         self.selected_floors = selected_floors
-#         self.luminocity_checked = luminocity_checked
-#         self.luminocity_value = luminocity_value
-#         self.grayscale_checked = grayscale_checked
-#         self.add_tags_checked = add_tags_checked
-#         self.output_scale = output_scale
-#         self.output_paper_type = output_paper_type
-#     def function(self):
-#         self.worker.progress.connect(self.progress_dialog.update_progress)
-#         self.worker.finished.connect(self.progress_dialog.accept)
-#         self.worker.start()
-#         pool = multiprocessing.Pool(20)
-#         align_multiprocessing(pool, self.current_sketch_dir)
-#         pool.close()
-#
-#         if self.luminocity_checked:
-#             #muti processing
-#             pool = multiprocessing.Pool(20)
-#             luminocity_pdf_multiprocessing(pool, self.current_sketch_dir, self.luminocity_value)
-#             pool.close()
-#
-#         if self.grayscale_checked:
-#             pool = multiprocessing.Pool(20)
-#             grays_scale_pdf_multiprocessing(pool, self.current_sketch_dir)
-#             pool.close()
-#         if self.add_tags_checked:
-#             tag = f"1:{self.output_scale}@{self.output_paper_type}"
-#             tag_x = 0
-#             tag_y = 0.1
-#             markup_type = self.markup_dict[self.output_paper_type]
-#             markup_width_coe = self.markup_width_dict[self.output_paper_type]
-#             pool = multiprocessing.Pool(20)
-#             add_tags_multiprocessing(pool, self.current_sketch_dir, markup_type, tag_x, tag_y,
-#                                      tag, self.selected_floors, markup_width_coe)
-#             pool.close()
+class BD_Move_To_Center_Process(BD_Process):
+    def __init__(self, info, ui, sketch_dir, paper_size):
+        super().__init__(info, ui)
+        self.sketch_dir = sketch_dir
+        self.paper_size = paper_size
+    def function(self):
+        pass
+        # pdf_move_center(self.sketch_dir, self.paper_size)
 
-# class BD_Copy_Markup_Process(BD_Process):
-#     def __init__(self, info, ui, current_sketch_dir, existing_sketch_dir, page_number):
-#         super().__init__(info, ui)
-#         self.current_sketch_dir = current_sketch_dir
-#         self.existing_sketch_dir = existing_sketch_dir
-#         self.page_number = page_number
-#     def function(self):
-#         self.worker.progress.connect(self.progress_dialog.update_progress)
-#         self.worker.finished.connect(self.progress_dialog.accept)
-#         self.worker.start()
-#
-#         PDFTools.paste_all_markup_to_file_by_base_point(self.existing_sketch_dir, self.current_sketch_dir)
+
+class BD_Setup_Drawing_Process(BD_Process):
+    def __init__(self, info, ui, sketch_dir, output_dir):
+        super().__init__(info, ui)
+        self.sketch_dir = sketch_dir
+        self.output_dir = output_dir
+
+    def function(self):
+        file_time = str(datetime.now().strftime("%Y%m%d%H%M%S"))
+        file_dir_trans = os.path.join(conf["trans_dir"], file_time)
+        txt_name = os.path.join(file_dir_trans, 'file_names_setupdrawing.txt')
+        os.makedirs(os.path.dirname(txt_name), exist_ok=True)
+        with open(txt_name, 'w') as file:
+            file_names = self.sketch_dir + ';' + self.output_dir + ';'
+            file.write(file_names)
+        while True:
+            time.sleep(2)
+            if self.is_available():
+                break
+
+class BD_Fill_Content_Process(BD_Process):
+    # TODO: need to fix the name error
+    def __init__(self, info, ui, temp1, output_file, temp3, content_replace_dict_list, content_replace_dict_firstpage):
+        super().__init__(info, ui)
+        self.temp1 = temp1
+        self.output_file = output_file
+        self.temp3 = temp3
+        self.content_replace_dict_list = content_replace_dict_list
+        self.content_replace_dict_firstpage = content_replace_dict_firstpage
+
+    def function(self):
+        #TODO: remove get number of pages
+        pages = get_number_of_page(self.output_file)
+        for i in range(pages):
+            content_replace_dict = self.content_replace_dict_list[i]
+            PDFTools.paste_markup_to_file(self.temp1, self.output_file, page_number=1, new_page_number=i + 1,
+                                             offset=(0, 0), content_replace_dict=content_replace_dict)
+        time.sleep(2)
+        combine_pdf([self.temp3, self.output_file], self.output_file)
+        PDFTools.paste_markup_to_file(self.temp1, self.output_file, page_number=1, new_page_number=1, offset=(0, 0),
+                                         content_replace_dict=self.content_replace_dict_firstpage)
+
+
+
+class BD_Paste_Logo_Process(BD_Process):
+    def __init__(self, info, ui, output_dir, paper_size, logo_dir):
+        super().__init__(info, ui),
+        self.output_dir = output_dir
+        self.paper_size = paper_size
+        self.logo_dir = logo_dir
+    def function(self):
+        pages = get_number_of_page(self.output_dir)
+        for i in range(pages):
+            insert_logo_into_pdf(self.output_dir, self.logo_dir, i, self.paper_size)
+            time.sleep(2)
+
 
 class BD_Wait_Process(BD_Process):
     def __init__(self, info, ui):
         super().__init__(info, ui)
+        self.processing_time = 900
     def function(self):
         self.worker.progress.connect(self.progress_dialog.update_progress)
         self.worker.finished.connect(self.progress_dialog.accept)
