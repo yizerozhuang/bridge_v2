@@ -17,9 +17,9 @@ class BD_Clipboard_Frame(BD_Base_Frame):
             pixmap = QPixmap.fromImage(image)
             self.label.setPixmap(pixmap)
             self.label.setText("")  # Clear any previous text
-        else:
-            self.label.setPixmap(QPixmap())  # Clear image
-            self.label.setText("")
+        # else:
+        #     self.label.setPixmap(QPixmap())  # Clear image
+        #     self.label.setText("")
 
     def is_image_included(self):
         return self.clipboard.mimeData().hasImage()

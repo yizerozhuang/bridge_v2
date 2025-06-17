@@ -422,11 +422,19 @@ def combine_pdf(input_file_list, output_file):
     subprocess.check_output([bluebeam_engine_dir, command])
 
 
-def flatten_pdf(input_file, output_file):
+def flatten_pdf(input_file, output_file, includes=None):
+    if includes:
+        #Todo: include the rest according to blue_script_reference
+        value = {
+            "image":1,
+            "snapshot":8
+        }
+        flags = sum([value[key] for key in includes])
+        command = f"Open('{input_file}') Flatten(false, {flags}) Save('{output_file}') Close()"
+    else:
+        command = f"Open('{input_file}') Flatten(false) Save('{output_file}') Close()"
     bluebeam_engine_dir = conf["bluebeam_engine_dir"]
-    command = f"Open('{input_file}') Flatten(false) Save('{output_file}') Close()"
     subprocess.check_output([bluebeam_engine_dir, command])
-
 
 def unflatten_pdf(input_file, output_file):
     bluebeam_engine_dir = conf["bluebeam_engine_dir"]
@@ -828,26 +836,26 @@ def pdf_move_center(pdf_file, paper_size):
 def insert_logo_into_pdf(pdf_path, image_path, page_number, paper_size):
     #TODO: need to keep the same rotation and make sure the template is no rotation for all
     if paper_size == 'A3':
-        rec_x = 665
-        rec_y = 16
+        rec_x = 670
+        rec_y = 15
         rec_width = 95
         rec_height = 75
     elif paper_size == 'A1':
-        rec_x = 100
-        rec_y = 0
-        rec_width = 100
-        rec_height = 200
+        rec_x = 966
+        rec_y = 56
+        rec_width = 250
+        rec_height = 100
     else:
         #A0
-        rec_x = 1265
+        rec_x = 1266
         rec_y = 45
-        rec_width = 595
+        rec_width = 600
         rec_height = 110
     img = Image.open(image_path)
     img_width, img_height = img.size
-    # img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height)
-    # insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=0)
-    insert_image_into_pdf(pdf_path, image_path, page_number, rec_x, rec_y,rec_width, rec_height, rotation=270)
+    img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height)
+    insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=270)
+    # insert_image_into_pdf(pdf_path, image_path, page_number, rec_x, rec_y,rec_width, rec_height, rotation=270)
 
 def remove_duplicates_keep_order(lst):
     seen = set()
@@ -1114,16 +1122,30 @@ def compress_directory_to_zip(zip_filename, dir_to_zip):
 
 
 def page_delete(input_pdf, output_pdf, n):
+
+    #TODO: fix this function
     try:
         reader = PdfReader(input_pdf)
         writer = PdfWriter()
-        n = min(n, len(reader.pages))
+        n = max(n, len(reader.pages))
         for i in range(n):
             writer.add_page(reader.pages[i])
         with open(output_pdf, 'wb') as f:
             writer.write(f)
     except:
         traceback.print_exc()
+
+def duplicate_page(input_pdf, output_pdf, num):
+    output_page_number = get_pdf_page_numbers(output_pdf)
+    n = num - output_page_number
+    PDFTools_v2.duplicate_page(input_pdf, output_pdf, n)
+
+    # reader = PdfReader(input_pdf)
+    # writer = PdfWriter()
+    # for i in range(num):
+    #     writer.add_page(reader.pages[0])
+    # with open(output_pdf, "wb") as f:
+    #     writer.write(f)
 
 
 def generate_combinations(a, b, c, x):

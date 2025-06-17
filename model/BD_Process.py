@@ -269,8 +269,7 @@ class BD_Move_To_Center_Process(BD_Process):
         self.sketch_dir = sketch_dir
         self.paper_size = paper_size
     def function(self):
-        pass
-        # pdf_move_center(self.sketch_dir, self.paper_size)
+        pdf_move_center(self.sketch_dir, self.paper_size)
 
 
 class BD_Setup_Drawing_Process(BD_Process):
@@ -290,30 +289,24 @@ class BD_Setup_Drawing_Process(BD_Process):
         while True:
             time.sleep(2)
             if self.is_available():
+                flatten_pdf(self.output_dir, self.output_dir, ["snapshot"])
                 break
 
 class BD_Fill_Content_Process(BD_Process):
     # TODO: need to fix the name error
-    def __init__(self, info, ui, temp1, output_file, temp3, content_replace_dict_list, content_replace_dict_firstpage):
+    def __init__(self, info, ui, cover_page, output_file, content_replace_dict_list):
         super().__init__(info, ui)
-        self.temp1 = temp1
+        self.cover_page = cover_page
         self.output_file = output_file
-        self.temp3 = temp3
         self.content_replace_dict_list = content_replace_dict_list
-        self.content_replace_dict_firstpage = content_replace_dict_firstpage
 
     def function(self):
         #TODO: remove get number of pages
+        combine_pdf([self.cover_page, self.output_file], self.output_file)
         pages = get_number_of_page(self.output_file)
         for i in range(pages):
-            content_replace_dict = self.content_replace_dict_list[i]
-            PDFTools.paste_markup_to_file(self.temp1, self.output_file, page_number=1, new_page_number=i + 1,
-                                             offset=(0, 0), content_replace_dict=content_replace_dict)
-        time.sleep(2)
-        combine_pdf([self.temp3, self.output_file], self.output_file)
-        PDFTools.paste_markup_to_file(self.temp1, self.output_file, page_number=1, new_page_number=1, offset=(0, 0),
-                                         content_replace_dict=self.content_replace_dict_firstpage)
-
+            # PDFTools.paste_markup_to_file(self.temp1, self.output_file, page_number=1, new_page_number=i+1,offset=(0, 0), content_replace_dict=content_replace_dict)
+            PDFTools.replace_markup_comment(self.output_file, self.content_replace_dict_list[i], i+1)
 
 
 class BD_Paste_Logo_Process(BD_Process):

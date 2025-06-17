@@ -5,7 +5,8 @@ from model.ui.BD_Radio_Button_Frame import BD_Radio_Button_Frame
 from model.ui.BD_Table_Frame import BD_Table_Frame
 from model.ui.BD_Clipboard_Frame import BD_Clipboard_Frame
 
-from utility.pdf_utility import get_pdf_page_numbers, move_file_to_ss, page_delete, open_in_bluebeam
+from utility.pdf_utility import get_pdf_page_numbers, move_file_to_ss, duplicate_page, open_in_bluebeam
+from utility.pdf_tool import PDFTools
 
 from model.BD_Process import (messagebox, BD_Setup_Drawing_Process, BD_Move_To_Center_Process, BD_Paste_Logo_Process,
                               BD_Fill_Content_Process, BD_Wait_Process)
@@ -80,19 +81,25 @@ class Drawing_Tab(BD_Base_Frame):
     def move_to_center(self):
         #TODO: save some variables to the __init__
         sketch_dir = self.input_file_table_windows.get_current_item_path()
-        pages = int(self.drawing_line_edit_total_page.text())
+        pages = int(self.drawing_revision_table.get_row_count())
         paper_size = self.drawing_line_edit_paper_size.text()
         scale = int(self.drawing_line_edit_scale.text())
         template_type = self.template_types_radio_button_windows.get_selection_text()
         output_dir = os.path.join(self.app.current_folder_address, f"{self.app.project_name}-Mechanical Drawings.pdf")
-
+        assert int(self.drawing_line_edit_total_page.text()) == int(self.drawing_line_edit_current_page.text())
         assert paper_size in ['A3','A1','A0'], f"the paper size {paper_size} is not a valid paper size"
+        for i in range(1, PDFTools.page_count(sketch_dir) + 1):
+            markups = PDFTools.return_markup_by_page(sketch_dir, i)
+            markups = PDFTools.filter_markup_by(markups, {"subject": "Rectangle", "color": "#7C0000"})
+            assert len(markups) > 0, f"Page {i} don't have any rectangular"
+            assert len(markups) == 1, f"Page {i} have more than one rectangular"
+        # assert scale.is_integer(), f"the scale {scale} is wrong"
 
-        template_2 = os.path.join(Drawing_Tab.template_dir, f"{paper_size}-{template_type}", f"template 2-{scale}.pdf")
+        template = os.path.join(Drawing_Tab.template_dir, f"{paper_size}-{template_type}", f"template-{scale}.pdf")
 
         move_file_to_ss(output_dir, os.path.join(self.app.current_folder_address, "SS"))
-        shutil.copy(template_2, output_dir)
-        page_delete(output_dir, output_dir, pages)
+        shutil.copy(template, output_dir)
+        duplicate_page(template, output_dir, pages - 1) # exclude the cover page
 
         # process = BD_Move_To_Center_Process("Moving sketch to paper center.", self.ui, sketch_dir, paper_size)
         # process.error_occurred.connect(self.handle_thread_error)
@@ -117,7 +124,7 @@ class Drawing_Tab(BD_Base_Frame):
     def fill_content(self):
         drawn_by = self.drawing_line_edit_drawn_by.text()
         check_by = self.drawing_line_edit_check_by.text()
-        pages = int(self.drawing_line_edit_total_page.text())
+        pages = int(self.drawing_revision_table.get_row_count())
         scale = self.drawing_line_edit_scale.text()
         paper_size = self.drawing_line_edit_paper_size.text()
         template_type = self.template_types_radio_button_windows.get_selection_text()
@@ -127,41 +134,27 @@ class Drawing_Tab(BD_Base_Frame):
 
         content_replace_dict_list = []
 
-        # TODO: this will be error when include equipment schedule(more than reference one row)
-        for i in range(1, pages + 1):
-            content_replace_dict = {}
+        for i in range(pages):
             drawing_number, drawing_name, drawing_revision = self.drawing_revision_table.get_row_values(i)
-            content_replace_dict['Item_1_rev'] = drawing_revision
-            content_replace_dict['Item_2_rev_des'] = 'ISSUED FOR APPROVAL'
-            content_replace_dict['Item_3_drw'] = drawn_by
-            content_replace_dict['Item_4_chk'] = check_by
-            content_replace_dict['Item_5_date'] = str(date.today().strftime("%Y%m%d"))
-            content_replace_dict['Item_6_address'] = project_name
-            content_replace_dict['Item_7_title'] = drawing_name
-            content_replace_dict['Item_8_scale'] = scale + '@' + paper_size
-            content_replace_dict['Item_9_prono'] = project_number
-            content_replace_dict['Item_10_drwno'] = drawing_number
-            content_replace_dict['Item_11_issue'] = "FOR APPROVAL"
-            content_replace_dict_list.append(content_replace_dict)
-        drawing_number, drawing_name, drawing_revision = self.drawing_revision_table.get_row_values(0)
-        content_replace_dict_firstpage = {}
-        content_replace_dict_firstpage['Item_1_rev'] = drawing_revision
-        content_replace_dict_firstpage['Item_2_rev_des'] = 'ISSUED FOR APPROVAL'
-        content_replace_dict_firstpage['Item_3_drw'] = drawn_by
-        content_replace_dict_firstpage['Item_4_chk'] = check_by
-        content_replace_dict_firstpage['Item_5_date'] = str(date.today().strftime("%Y%m%d"))
-        content_replace_dict_firstpage['Item_6_address'] = project_name
-        content_replace_dict_firstpage['Item_7_title'] = drawing_name
-        content_replace_dict_firstpage['Item_8_scale'] = 'N.T.S@' + paper_size
-        content_replace_dict_firstpage['Item_9_prono'] = project_number
-        content_replace_dict_firstpage['Item_10_drwno'] = drawing_number
-        content_replace_dict_firstpage['Item_11_issue'] = "FOR APPROVAL"
+            content_replace_dict_list.append(
+                {
+                    "revision": drawing_revision,
+                    "revision_description": "ISSUED FOR APPROVAL",
+                    "drawn_by": drawn_by,
+                    "check_by":check_by,
+                    "date": str(date.today().strftime("%Y%m%d")),
+                    "address":project_name,
+                    "title":drawing_name,
+                    "scale": 'N.T.S@' + paper_size if i == 0 else scale + '@' + paper_size,
+                    "project_number": project_number,
+                    "drawing_number": drawing_number,
+                    "issue": "FOR APPROVAL"
+                }
+            )
 
-        template_1 = os.path.join(Drawing_Tab.template_dir, f"{paper_size}-{template_type}", f"template 1-{scale}.pdf")
-        template_3 = os.path.join(Drawing_Tab.template_dir, f"{paper_size}-{template_type}", f"template 3-{scale}.pdf")
+        cover_page = os.path.join(Drawing_Tab.template_dir, f"{paper_size}-{template_type}", f"cover page-{scale}.pdf")
 
-        process = BD_Fill_Content_Process('Setting frame information.', self.ui, template_1,output_dir, template_3,
-                                          content_replace_dict_list, content_replace_dict_firstpage)
+        process = BD_Fill_Content_Process('Setting frame information.', self.ui, cover_page, output_dir, content_replace_dict_list)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.paste_logo)
         process.start_process()

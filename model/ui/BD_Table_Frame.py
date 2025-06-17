@@ -112,3 +112,6 @@ class BD_Table_Frame(BD_Base_Frame):
                     items.append(item.text())
                 result.append(items)
             return result
+
+    def get_row_count(self):
+        return self.table.rowCount()

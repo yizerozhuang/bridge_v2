@@ -185,7 +185,7 @@ class PDFTools:
 
         result_bytes = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, command])
         result_text = result_bytes.decode("gbk").split("\r\n")[1]
-        string = result_text.replace("|\"", "\"").replace("|'", "'").replace("'{", "{").replace("}'", "}").replace("||", "\\").replace("'True'", "true").replace("'False'", "false").replace("'None'", "null").replace("'", '"')
+        string = result_text.replace("|\"", "\"").replace("|'", "'").replace("'{", "{").replace("}'", "}").replace("||", "\\").replace("\\r", "").replace("'True'", "true").replace("'False'", "false").replace("'None'", "null").replace("'", '"')
         if string.strip() == '':
             return {}
         string = PDFTools._replace_control_chars(string)
@@ -309,6 +309,22 @@ class PDFTools:
         os.remove("set_markup.bci")
 
     @staticmethod
+    def insert_pages(input_file, output_file):
+        command = [f"Open('{output_file}')"]
+        command.append(f"InsertPages(0,'{input_file}')")
+        command.extend(["Save()", "Close()"])
+        with open("insert_pages.bci", 'w') as f:
+            f.write('\n'.join(command))
+        _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('insert_pages.bci')"])
+        os.remove("insert_pages.bci")
+
+    @staticmethod
+    def duplicate_page(input_file, output_file, n):
+        for _ in range(n):
+            PDFTools.insert_pages(input_file, output_file)
+
+
+    @staticmethod
     def remove_color(file_dir, colors):
         command = [f"Open('{file_dir}')"]
         for color in colors:
@@ -395,6 +411,15 @@ class PDFTools:
         logger.info("copy_markup for page {} finished.".format(page_number))
         PDFTools.paste_markup(new_file, new_page_number, content, content_replace_dict)
 
+    @staticmethod
+    def replace_markup_comment(input_file, content_replace_dict, page_number):
+        logger.info("update_markup_comment for page {} Start.".format(page_number))
+        markups = PDFTools.return_markup_by_page(input_file, page_number)
+        replace_markup = {}
+        for markup_id, markup in markups.items():
+            if "comment" in markup.keys() and markup["comment"] in content_replace_dict.keys():
+                replace_markup[markup_id] = {"comment":content_replace_dict[markup["comment"]]}
+        PDFTools.set_markup(input_file, page_number, replace_markup)
     @staticmethod
     def remove_colors_to_file(input_path, remove_color_list, page_number, output_path):
         logger.info(f"remove color for page {page_number} Start.")
