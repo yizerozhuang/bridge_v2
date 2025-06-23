@@ -4,6 +4,8 @@ from PyQt5.QtWidgets import QLabel
 from PyQt5.QtGui import QGuiApplication, QPixmap
 
 class BD_Clipboard_Frame(BD_Base_Frame):
+
+    #TODO: Freeze when set up drawing
     def __init__(self, app, qt_label:QLabel):
         super().__init__(app)
         self.label = qt_label

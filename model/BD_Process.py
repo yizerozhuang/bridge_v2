@@ -1,9 +1,10 @@
+import shutil
 import sys
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from utility.pdf_utility import (resize_pdf_multiprocessing,align_multiprocessing, grays_scale_pdf_multiprocessing,
                                  add_tags_multiprocessing, flatten_pdf, get_pdf_page_numbers, pdf_move_center, get_number_of_page, combine_pdf,
-                                 insert_logo_into_pdf)
+                                 insert_logo_into_pdf, import_markups)
 from utility.pdf_tool import PDFTools
 from PyQt5.QtWidgets import QDialog, QProgressBar, QLabel, QVBoxLayout, QMessageBox
 from PyQt5.QtCore import Qt
@@ -221,47 +222,32 @@ class BD_Grayscale_and_Tags_Process(BD_Process):
             pool.close()
 
 class BD_Copy_Markup_Process(BD_Process):
-    def __init__(self, info, ui, current_sketch_dir, existing_sketch_dir):
+    def __init__(self, info, ui, current_file_dir, existing_file_dir):
         super().__init__(info, ui)
-        self.current_sketch_dir = current_sketch_dir
-        self.existing_sketch_dir = existing_sketch_dir
+        self.current_file_dir = current_file_dir
+        self.existing_file_dir = existing_file_dir
     def function(self):
         self.worker.progress.connect(self.progress_dialog.update_progress)
         self.worker.finished.connect(self.progress_dialog.accept)
         self.worker.start()
-        page_number = get_pdf_page_numbers(self.current_sketch_dir)
-        file_path = os.path.join(conf["trans_dir"], datetime.now().strftime("%Y%m%d%H%M%S"), 'file_names_copymarkup.txt')
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-        # offsets = []
-        # for i in range(1, page_number + 1):
-        #     existing_markups = PDFTools.return_markup_by_page(self.existing_sketch_dir, i)
-        #     new_markups = PDFTools.return_markup_by_page(self.current_sketch_dir, i)
-        #     existing_markups = PDFTools.filter_markup_by(existing_markups, {"type": "PolyLine", "color": "#7C0000"})
-        #     new_markups = PDFTools.filter_markup_by(new_markups, {"type": "PolyLine", "color": "#7C0000"})
-        #     assert len(existing_markups) > 0, f"Page {i} of existing sketch dont have base point"
-        #     assert len(new_markups) > 0, f"Page {i} of new sketch dont have base point"
-        #     assert len(existing_markups) == 1, f"Page {i} of existing sketch have more than one base point"
-        #     assert len(new_markups) == 1, f"Page {i} of existing sketch have more than one base point"
-        #
-        #     markup_1 = list(existing_markups.values())[0]
-        #     markup_2 = list(new_markups.values())[0]
-        #     offset = (float(markup_2['x']) - float(markup_1['x']), float(markup_2['y']) - float(markup_1['y']))
 
 
+        import_markups(self.current_file_dir, self.existing_file_dir)
 
-        with open(file_path, 'w') as file:
-            file_names = {
-                "File1": self.existing_sketch_dir,
-                "File2": self.current_sketch_dir,
-                'copyornot':[[True]*page_number, [True]*page_number]
-            }
-            file.write(str(file_names))
-        # Todo: design the waiting function
-        while True:
-            time.sleep(2)
-            if self.is_available():
-                break
+        # file_path = os.path.join(conf["trans_dir"], datetime.now().strftime("%Y%m%d%H%M%S"), 'file_names_copymarkup.txt')
+        # os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # with open(file_path, 'w') as file:
+        #     file_names = {
+        #         "File1": self.existing_sketch_dir,
+        #         "File2": self.current_sketch_dir,
+        #         'copyornot':[[True]*page_number, [True]*page_number]
+        #     }
+        #     file.write(str(file_names))
+        # # Todo: design the waiting function
+        # while True:
+        #     time.sleep(2)
+        #     if self.is_available():
+        #         break
 
 class BD_Move_To_Center_Process(BD_Process):
     def __init__(self, info, ui, sketch_dir, paper_size):
@@ -278,47 +264,80 @@ class BD_Setup_Drawing_Process(BD_Process):
         self.sketch_dir = sketch_dir
         self.output_dir = output_dir
 
+    # def function(self):
+    #     file_time = str(datetime.now().strftime("%Y%m%d%H%M%S"))
+    #     file_dir_trans = os.path.join(conf["trans_dir"], file_time)
+    #     txt_name = os.path.join(file_dir_trans, 'file_names_setupdrawing.txt')
+    #     os.makedirs(os.path.dirname(txt_name), exist_ok=True)
+    #     with open(txt_name, 'w') as file:
+    #         file_names = self.sketch_dir + ';' + self.output_dir + ';'
+    #         file.write(file_names)
+    #     while True:
+    #         time.sleep(2)
+    #         if self.is_available():
+    #             flatten_pdf(self.output_dir, self.output_dir, ["snapshot"])
+    #             break
     def function(self):
-        file_time = str(datetime.now().strftime("%Y%m%d%H%M%S"))
-        file_dir_trans = os.path.join(conf["trans_dir"], file_time)
-        txt_name = os.path.join(file_dir_trans, 'file_names_setupdrawing.txt')
-        os.makedirs(os.path.dirname(txt_name), exist_ok=True)
-        with open(txt_name, 'w') as file:
-            file_names = self.sketch_dir + ';' + self.output_dir + ';'
-            file.write(file_names)
-        while True:
-            time.sleep(2)
-            if self.is_available():
-                flatten_pdf(self.output_dir, self.output_dir, ["snapshot"])
-                break
+        sketch_page_count = PDFTools.page_count(self.sketch_dir)
+        output_page_count = PDFTools.page_count(self.output_dir)
+
+        if sketch_page_count == output_page_count:
+            for i in range(1, sketch_page_count+1):
+                PDFTools.replace_pages(self.output_dir, self.sketch_dir, i, i)
+        elif output_page_count == 2*sketch_page_count:
+            for i in range(1, sketch_page_count+1):
+                PDFTools.replace_pages(self.output_dir, self.sketch_dir, i, 2*i-1)
+                PDFTools.replace_pages(self.output_dir, self.sketch_dir, i, 2*i)
+        else:
+            raise ValueError
+        flatten_pdf(self.output_dir, self.output_dir, ["snapshot"])
 
 class BD_Fill_Content_Process(BD_Process):
     # TODO: need to fix the name error
-    def __init__(self, info, ui, cover_page, output_file, content_replace_dict_list):
+    def __init__(self, info, ui, cover_page, output_file, content_replace_dict_list, service, sketch_dir):
         super().__init__(info, ui)
         self.cover_page = cover_page
         self.output_file = output_file
         self.content_replace_dict_list = content_replace_dict_list
+        self.service = service
+        self.sketch_dir = sketch_dir
 
     def function(self):
-        #TODO: remove get number of pages
+        # if self.service in ["Electrical", "Hydraulic"]:
+        #     temp_file_path = os.path.join(conf["c_temp_dir"], os.path.basename(self.output_file))
+        #     shutil.copy(self.output_file, conf["c_temp_dir"])
+        #     PDFTools.insert_pages(temp_file_path, self.output_file)
+
+        # if self.service == "Electrical":
+        #     number_pages = get_number_of_page(self.output_file)
+        #     assert number_pages%2==0
+        #     for i in range(1, number_pages//2+1):
+        #         PDFTools.paste_markup_to_file(r"T:\00-Template-Do Not Modify\09-AutoCAD and Bluebeam\Copilot Template\Electrical\A1\Restaurant\100\power markup.pdf",
+        #                                       self.output_file, 1, i)
+        #     for i in range(number_pages//2+1, number_pages + 1):
+        #         PDFTools.paste_markup_to_file(
+        #             r"T:\00-Template-Do Not Modify\09-AutoCAD and Bluebeam\Copilot Template\Electrical\A1\Restaurant\100\lighting markup.pdf",
+        #             self.output_file, 1, i)
+        import_markups(self.output_file, self.sketch_dir)
         combine_pdf([self.cover_page, self.output_file], self.output_file)
         pages = get_number_of_page(self.output_file)
+        assert pages == len(self.content_replace_dict_list), f"the number of page is {pages}, the table has {len(self.content_replace_dict_list)} row"
         for i in range(pages):
             # PDFTools.paste_markup_to_file(self.temp1, self.output_file, page_number=1, new_page_number=i+1,offset=(0, 0), content_replace_dict=content_replace_dict)
             PDFTools.replace_markup_comment(self.output_file, self.content_replace_dict_list[i], i+1)
 
 
 class BD_Paste_Logo_Process(BD_Process):
-    def __init__(self, info, ui, output_dir, paper_size, logo_dir):
+    def __init__(self, info, ui, output_dir, paper_size, orientation, logo_dir):
         super().__init__(info, ui),
         self.output_dir = output_dir
         self.paper_size = paper_size
+        self.orientation = orientation
         self.logo_dir = logo_dir
     def function(self):
         pages = get_number_of_page(self.output_dir)
         for i in range(pages):
-            insert_logo_into_pdf(self.output_dir, self.logo_dir, i, self.paper_size)
+            insert_logo_into_pdf(self.output_dir, self.logo_dir, i, self.orientation, self.paper_size)
             time.sleep(2)
 
 

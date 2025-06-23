@@ -44,3 +44,6 @@ CONFIGURATION["Color button style 6"]="QPushButton {background-color: rgb(153, 1
 
 CONFIGURATION['Text red style']="font: 12pt 'Calibri'; border-style: outset; color: rgb(0, 0, 0); border-color: rgb(0, 0, 0);background-color: rgb(255, 0, 0);"
 CONFIGURATION['Text normal style']="font: 12pt 'Calibri'; border-style: outset; color: rgb(0, 0, 0); border-color: rgb(0, 0, 0);background-color: rgb(170, 170, 170);"
+
+CONFIGURATION["bluebeam_dir"]= r"C:\Program Files\Bluebeam Software\Bluebeam Revu\2017\Revu\Revu.exe"
+CONFIGURATION["bluebeam_engine_dir"] = r'C:\Program Files\Bluebeam Software\Bluebeam Revu\2017\Script\ScriptEngine.exe'

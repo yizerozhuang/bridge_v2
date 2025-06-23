@@ -29,15 +29,72 @@ class Sketch_Tab(BD_Base_Frame):
 
     def __init__(self, app):
         super().__init__(app)
-
-        self.current_sketch_dir = ""
-
         self.rescale_tab()
         self.align_tab()
         self.markup_tab()
         self.checklist_tab()
 
-
+    @property
+    def input_file_dir(self):
+        return self.rescale_single_file_window.get_input_file()
+    @property
+    def current_sketch_dir(self):
+        return os.path.join(self.app.current_folder_address, "set_up_sketch.pdf")
+    @property
+    def page_number(self):
+        if os.path.exists(self.current_sketch_dir):
+            return get_pdf_page_numbers(self.current_sketch_dir)
+        return 0
+    @property
+    def input_scale(self):
+        return self.rescale_original_scale_radio_button_window.get_selection_value()
+    @property
+    def input_size_x(self):
+        if self.rescale_original_size_radio_button_window.get_selection_value()[0] == "":
+            return 0
+        return convert_mm_to_pixel(self.rescale_original_size_radio_button_window.get_selection_value()[0])
+    @property
+    def input_size_y(self):
+        if self.rescale_original_size_radio_button_window.get_selection_value()[1] == "":
+            return 0
+        return convert_mm_to_pixel(self.rescale_original_size_radio_button_window.get_selection_value()[1])
+    @property
+    def output_scale(self):
+        return self.rescale_output_scale_radio_button_window.get_selection_value()
+    @property
+    def output_size(self):
+        return self.rescale_output_size_radio_button_window.get_selection_text().split("(")[0]
+    @property
+    def output_size_x(self):
+        if self.rescale_output_size_radio_button_window.get_selection_value()[0] == "":
+            return 0
+        return convert_mm_to_pixel(self.rescale_output_size_radio_button_window.get_selection_value()[0])
+    @property
+    def output_size_y(self):
+        if self.rescale_output_size_radio_button_window.get_selection_value()[1] == "":
+            return 0
+        return convert_mm_to_pixel(self.rescale_output_size_radio_button_window.get_selection_value()[1])
+    @property
+    def selected_colors(self):
+        return generate_possible_colors(self.color_window.get_selected_colors())
+    @property
+    def luminocity_checked(self):
+        return self.color_window.luminocity_is_checked()
+    @property
+    def luminocity_value(self):
+        return self.color_window.get_luminoicity()
+    @property
+    def selected_floors(self):
+        return self.floor_table.get_current_content()
+    @property
+    def grayscale_checked(self):
+        return self.color_window.grayscale_is_checked()
+    @property
+    def add_tags_checked(self):
+        return self.color_window.add_tags_is_checked()
+    @property
+    def current_table_item(self):
+        return self.table_window.get_current_item_path()
     def rescale_tab(self):
         self.rescale_single_file_window = BD_Single_File_Frame(
             self.app,
@@ -77,42 +134,28 @@ class Sketch_Tab(BD_Base_Frame):
         self.sketch_rescale_button.clicked.connect(self.rescale)
 
     def rescale(self):
-        input_file_dir = self.rescale_single_file_window.get_input_file()
-        input_scale = self.rescale_original_scale_radio_button_window.get_selection_value()
-        input_size_x, input_size_y = self.rescale_original_size_radio_button_window.get_selection_value()
-        input_size_x = convert_mm_to_pixel(input_size_x)
-        input_size_y = convert_mm_to_pixel(input_size_y)
-        output_scale = self.rescale_output_scale_radio_button_window.get_selection_value()
-        output_size_x, output_size_y = self.rescale_output_size_radio_button_window.get_selection_value()
-        output_size_x = convert_mm_to_pixel(output_size_x)
-        output_size_y = convert_mm_to_pixel(output_size_y)
-
-        self.current_sketch_dir = os.path.join(self.app.current_folder_address, f"{get_timestamp()}-set_up_sketch.pdf")
-
-        if input_scale == output_scale and input_size_x == output_size_x and input_size_y == output_size_y:
-            shutil.copy(input_file_dir, self.current_sketch_dir)
+        if self.input_scale == self.output_scale and self.input_size_x == self.output_size_x and self.input_size_y == self.output_size_y:
+            shutil.copy(self.input_file_dir, self.current_sketch_dir)
             self.rescale_success()
             return
-        original_input_size_x, original_input_size_y = get_pdf_page_sizes(input_file_dir)
-        if round(original_input_size_x, 2) != input_size_x or round(original_input_size_y, 2) != input_size_y:
+        original_input_size_x, original_input_size_y = get_pdf_page_sizes(self.input_file_dir)
+        if round(original_input_size_x, 2) != self.input_size_x or round(original_input_size_y, 2) != self.input_size_y:
             input_size = self.rescale_original_size_radio_button_window.get_selection_text().split("(")[0]
             raise ValueError(f"The input size is not {input_size}")
 
-        process = BD_Rescale_Process("Rescaling, open in Bluebeam when done.", self.ui, input_file_dir,
-                                     input_scale, input_size_x, input_size_y,
-                                     output_scale, output_size_x, output_size_y, self.current_sketch_dir)
+        process = BD_Rescale_Process("Rescaling, open in Bluebeam when done.", self.ui, self.input_file_dir,
+                                     self.input_scale, self.input_size_x, self.input_size_y,
+                                     self.output_scale, self.output_size_x, self.output_size_y, self.current_sketch_dir)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.rescale_success)
         process.start_process()
 
     def rescale_success(self):
-        page_number = get_pdf_page_numbers(self.current_sketch_dir)
         open_in_bluebeam(self.current_sketch_dir)
-        self.sketch_align_line_edit_total_page.setText(str(page_number))
-        self.sketch_align_line_edit_scale.setText(str(self.rescale_output_scale_radio_button_window.get_selection_value()))
-        output_size = self.rescale_output_size_radio_button_window.get_selection_text().split("(")[0]
-        self.sketch_align_line_edit_paper_size.setText(output_size)
-        self.color_window.set_total_pages_number(page_number)
+        self.sketch_align_line_edit_total_page.setText(str(self.page_number))
+        self.sketch_align_line_edit_scale.setText(str(self.output_scale))
+        self.sketch_align_line_edit_paper_size.setText(self.output_size)
+        self.color_window.set_total_pages_number(self.page_number)
         self.table_window.set_current_folder(self.app.current_folder_address)
         self.ui.toolBox.setCurrentIndex(1)
 
@@ -148,13 +191,8 @@ class Sketch_Tab(BD_Base_Frame):
         process.start_process()
 
     def color_modify(self):
-        selected_colors = generate_possible_colors(self.color_window.get_selected_colors())
-        luminocity_checked = self.color_window.luminocity_is_checked()
-        luminocity_value = self.color_window.get_luminoicity()
-        page_number = get_pdf_page_numbers(self.current_sketch_dir)
-
         process = BD_Color_Process("Modifying color and changing luminosity, open in Bluebeam when done.", self.ui, self.current_sketch_dir,
-                                   page_number, selected_colors, luminocity_checked, luminocity_value)
+                                   self.page_number, self.selected_colors, self.luminocity_checked, self.luminocity_value)
         if not process.is_available():
             if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
                 wait_process = BD_Wait_Process(
@@ -167,14 +205,9 @@ class Sketch_Tab(BD_Base_Frame):
         process.start_process()
 
     def add_tags(self):
-        selected_floors = self.floor_table.get_current_content()
-        grayscale_checked = self.color_window.grayscale_is_checked()
-        add_tags_checked = self.color_window.add_tags_is_checked()
-        output_scale = self.rescale_output_scale_radio_button_window.get_selection_value()
-        output_paper_type = self.rescale_output_size_radio_button_window.get_selection_text().split("(")[0]
         process = BD_Grayscale_and_Tags_Process("Grayscale and adding tags on Sketch, open in Bluebeam when done.", self.ui,
-                                                self.current_sketch_dir, selected_floors, grayscale_checked,
-                                                add_tags_checked, output_scale, output_paper_type)
+                                                self.current_sketch_dir, self.selected_floors, self.grayscale_checked,
+                                                self.add_tags_checked, self.output_scale, self.output_size)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.process_success)
         process.start_process()
@@ -195,17 +228,16 @@ class Sketch_Tab(BD_Base_Frame):
 
 
     def copy_markup(self):
-        current_item = self.table_window.get_current_item_path()
-        process = BD_Copy_Markup_Process("Copying markup, open in Bluebeam when done.", self.ui, self.current_sketch_dir, current_item)
-        assert get_pdf_page_numbers(self.current_sketch_dir) == get_pdf_page_numbers(
-            current_item), "The input page number is not the same as the output page number"
-        if not process.is_available():
-            if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
-                wait_process = BD_Wait_Process(
-                    "Waiting for someone else to finish the task, will start the task once it's avaliable", self.ui)
-                wait_process.start_process()
-            else:
-                return
+        assert get_pdf_page_numbers(self.current_sketch_dir) == get_pdf_page_numbers(self.current_table_item), "The input page number is not the same as the output page number"
+        # if not process.is_available():
+        #     if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
+        #         wait_process = BD_Wait_Process(
+        #             "Waiting for someone else to finish the task, will start the task once it's avaliable", self.ui)
+        #         wait_process.start_process()
+        #     else:
+        #         return
+        process = BD_Copy_Markup_Process("Copying markup, open in Bluebeam when done.", self.ui,
+                                         self.current_sketch_dir, self.current_table_item)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.copy_success)
         process.start_process()

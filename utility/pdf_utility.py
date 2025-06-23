@@ -25,7 +25,11 @@ from utility.pdf_tool import PDFTools as PDFTools_v2
 # from conf.conf import CONFIGURATION as conf
 from datetime import datetime
 
-conf = {}
+conf = {
+    "bluebeam_dir":r"C:\Program Files\Bluebeam Software\Bluebeam Revu\2017\Revu\Revu.exe",
+    "bluebeam_engine_dir": r'C:\Program Files\Bluebeam Software\Bluebeam Revu\2017\Script\ScriptEngine.exe',
+    "c_temp_dir": r"C:\Copilot_template"
+}
 
 def init_environment(config):
     global conf
@@ -833,28 +837,55 @@ def pdf_move_center(pdf_file, paper_size):
     shutil.rmtree(align_page_tmp)
 
 
-def insert_logo_into_pdf(pdf_path, image_path, page_number, paper_size):
-    #TODO: need to keep the same rotation and make sure the template is no rotation for all
-    if paper_size == 'A3':
-        rec_x = 670
-        rec_y = 15
-        rec_width = 95
-        rec_height = 75
-    elif paper_size == 'A1':
-        rec_x = 966
-        rec_y = 56
-        rec_width = 250
-        rec_height = 100
+def insert_logo_into_pdf(pdf_path, image_path, page_number, orientation, paper_size):
+    #TODO: need to keep the same rotation and make sure the template is no rotation for all and calculate all degrees and orientation
+    #Assuming there are only two types of paper, one is landscape with 0 rotation and portrait with 90 degree rotation
+    if orientation == "portrait":
+        if paper_size == 'A3':
+            rec_x = 670
+            rec_y = 15
+            rec_width = 95
+            rec_height = 75
+        elif paper_size == 'A1':
+            rec_x = 966
+            rec_y = 56
+            rec_width = 250
+            rec_height = 100
+        else:
+            #A0
+            rec_x = 1266
+            rec_y = 45
+            rec_width = 600
+            rec_height = 110
+
+        img = Image.open(image_path)
+        img_width, img_height = img.size
+        img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height, 270)
+        insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=270)
+    elif orientation == "landscape":
+        if paper_size == 'A3':
+            rec_x = 670
+            rec_y = 15
+            rec_width = 95
+            rec_height = 75
+        elif paper_size == 'A1':
+            rec_x = 1530
+            rec_y = 966
+            rec_width = 100
+            rec_height = 250
+        else:
+            # A0
+            rec_x = 1266
+            rec_y = 45
+            rec_width = 600
+            rec_height = 110
+        img = Image.open(image_path)
+        img_width, img_height = img.size
+        img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width,img_height, 0)
+        insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=0)
+        # insert_image_into_pdf(pdf_path, image_path, page_number, rec_x, rec_y, rec_width, rec_height, rotation=0)
     else:
-        #A0
-        rec_x = 1266
-        rec_y = 45
-        rec_width = 600
-        rec_height = 110
-    img = Image.open(image_path)
-    img_width, img_height = img.size
-    img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height)
-    insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=270)
+        raise ValueError
     # insert_image_into_pdf(pdf_path, image_path, page_number, rec_x, rec_y,rec_width, rec_height, rotation=270)
 
 def remove_duplicates_keep_order(lst):
@@ -1080,7 +1111,10 @@ def find_folder(root_dir, target_folder_name):
     return None
 
 
-def get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height):
+def get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height, rotation):
+    if rotation == 0:
+        img_width, img_height = img_height, img_width
+
     rec_ratio = rec_width / rec_height
     img_ratio = img_width / img_height
     if rec_ratio > img_ratio:
@@ -1094,7 +1128,6 @@ def get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width, img_height
         img_x = rec_x
         img_y = int(rec_y + (rec_height - img_height) / 2)
     return img_x, img_y, img_width, img_height
-
 
 def parse_page_ranges(pages_cus):
     pages_list = []
@@ -1147,6 +1180,16 @@ def duplicate_page(input_pdf, output_pdf, num):
     # with open(output_pdf, "wb") as f:
     #     writer.write(f)
 
+def import_markups(current_file_dir, existing_file_dir):
+    # assert PDFTools_v2.page_count(current_file_dir) == PDFTools_v2.page_count(existing_file_dir)
+    for i in range(1, PDFTools_v2.page_count(current_file_dir) + 1):
+        current_rotation, current_orientation = PDFTools_v2.get_page_rotate_orientation(current_file_dir, i)
+        existing_rotation, existing_orientation = PDFTools_v2.get_page_rotate_orientation(existing_file_dir, i)
+        assert current_orientation == existing_orientation
+        rotate = current_rotation - existing_rotation
+        PDFTools_v2.rotate_page(current_file_dir, rotate, i)
+        PDFTools_v2.imports(current_file_dir, existing_file_dir)
+        PDFTools_v2.rotate_page(current_file_dir, -rotate, i)
 
 def generate_combinations(a, b, c, x):
     delta = list(range(-x, x + 1))  # 生成所有可能的增减值

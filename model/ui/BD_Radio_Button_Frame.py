@@ -21,6 +21,8 @@ class BD_Radio_Button_Frame(BD_Base_Frame):
         # self.button_group.buttonClicked.connect()
 
     def get_selection_text(self):
+        if self.button_group.checkedButton() is None:
+            return ""
         return self.button_group.checkedButton().text()
     def get_selection_value(self):
         selection = self.selections[self.button_group.checkedId()]

@@ -35,6 +35,8 @@ class BD_Single_Table_Frame(BD_Base_Frame):
             self.table.setItem(i, 0, table_item)
 
     def get_current_item_path(self):
+        if self.table.currentItem() is None:
+            return None
         return os.path.join(self.line_edit.text(), self.table.currentItem().text())
     def on_double_click(self):
         file_path = self.get_current_item_path()

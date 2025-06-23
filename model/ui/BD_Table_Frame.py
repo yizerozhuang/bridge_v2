@@ -71,6 +71,10 @@ class BD_Table_Frame(BD_Base_Frame):
             for col in range(self.table.columnCount()):
                 self.table.setItem(index, col, QTableWidgetItem(values[col]))
 
+    def insert_row_on_the_last(self, *values):
+        row_count = self.table.rowCount()
+        self.insert_row(row_count, values)
+
     def is_row_filled(self, row):
         for col in range(self.table.columnCount()):
             item = self.table.item(row, col)

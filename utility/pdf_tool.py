@@ -181,11 +181,17 @@ class PDFTools:
 
     @staticmethod
     def return_markup_by_page(file_dir, i):
+
+
         command = f"Open('{file_dir}') MarkupGetExList({i}) Close()"
 
         result_bytes = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, command])
+        #Todo: if the free text box contains \backslash it will not be working and \"
         result_text = result_bytes.decode("gbk").split("\r\n")[1]
-        string = result_text.replace("|\"", "\"").replace("|'", "'").replace("'{", "{").replace("}'", "}").replace("||", "\\").replace("\\r", "").replace("'True'", "true").replace("'False'", "false").replace("'None'", "null").replace("'", '"')
+        # string = result_text.replace("|\"", "\"").replace("|'", "'").replace("'{", "{").replace("}'", "}").replace("||", "\\").replace("\\r", "").replace("\\", "\\\\").replace("'True'", "true").replace("'False'", "false").replace("'None'", "null").replace("'", '"')
+        string = result_text.replace('|"', '\\"').replace("|'", "'").replace("'{", "{").replace("}'", "}").replace("||",
+                                                                                                                   "\\").replace(
+            "\\r", "").replace("'True'", "true").replace("'False'", "false").replace("'None'", "null").replace("'", '"')
         if string.strip() == '':
             return {}
         string = PDFTools._replace_control_chars(string)
@@ -309,6 +315,62 @@ class PDFTools:
         os.remove("set_markup.bci")
 
     @staticmethod
+    def get_page_size(file_dir, i):
+        command = [f"Open('{file_dir}')"]
+        command.extend([f"PageSize({i})"])
+        command.extend(["Save()", "Close()"])
+        logger.info("get_page_size for page {} Complete.".format(i))
+        with open("get_page_size.bci", 'w') as f:
+            f.write('\n'.join(command))
+        size = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('get_page_size.bci')"])
+        size = size.decode("utf-8").split("\r\n")[1:3]
+        os.remove("get_page_size.bci")
+        return size
+
+
+    @staticmethod
+    def get_page_rotate(file_dir, i):
+        #TODO: raise error or deal with it when the rotate is not the same for pages
+        command = [f"Open('{file_dir}')"]
+        command.extend([f"PageRotateGet({i})"])
+        command.extend(["Save()", "Close()"])
+        logger.info("paste_markup for page {} Complete.".format(i))
+        with open("get_rotate.bci", 'w') as f:
+            f.write('\n'.join(command))
+        rotate = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('get_rotate.bci')"])
+        rotate = int(rotate.decode("utf-8").split("\r\n")[1:][0])
+        os.remove("get_rotate.bci")
+        return rotate
+
+    @staticmethod
+    def get_page_rotate_orientation(file_dir, i):
+        rotation = PDFTools.get_page_rotate(file_dir, i)
+        width, height = PDFTools.get_page_size(file_dir, i)
+        if width > height:
+            if rotation in [0, 180]:
+                return rotation, "landscape"
+            else:
+                return rotation, "portrait"
+        else:
+            if rotation in [0, 180]:
+                return rotation, "portrait"
+            else:
+                return rotation, "landscape"
+
+    @staticmethod
+    def rotate_page(file_dir, degrees, i):
+        if degrees==0:
+            return
+        command = [f"Open('{file_dir}')"]
+        command.extend([f"PageRotate({degrees}, true, true, '{i}')"])
+        command.extend(["Save()", "Close()"])
+        logger.info("rotate_page for page {} Complete.".format(i))
+        with open("rotate_page.bci", 'w') as f:
+            f.write('\n'.join(command))
+        _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('rotate_page.bci')"])
+        os.remove("rotate_page.bci")
+
+    @staticmethod
     def insert_pages(input_file, output_file):
         command = [f"Open('{output_file}')"]
         command.append(f"InsertPages(0,'{input_file}')")
@@ -323,6 +385,37 @@ class PDFTools:
         for _ in range(n):
             PDFTools.insert_pages(input_file, output_file)
 
+    @staticmethod
+    def replace_pages(file_dir, source_file, source_page, page_to_replace):
+        command = [f"Open('{file_dir}')"]
+
+        command.extend([f"ReplacePages('{source_file}', '{source_page}', '{page_to_replace}', true)"])
+
+        command.extend(["Save()", "Close()"])
+        with open("replace_pages.bci", 'w') as f:
+            f.write('\n'.join(command))
+        _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('replace_pages.bci')"])
+        os.remove("replace_pages.bci")
+
+    @staticmethod
+    def export(file_dir, output_bax):
+        command = [f"Open('{file_dir}')"]
+        command.extend([f"Export('{output_bax}')"])
+        command.extend(["Save()", "Close()"])
+        with open("export.bci", 'w') as f:
+            f.write('\n'.join(command))
+        _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('export.bci')"])
+        os.remove("export.bci")
+
+    @staticmethod
+    def imports(file_dir, input_bax):
+        command = [f"Open('{file_dir}')"]
+        command.extend([f"Import('{input_bax}')"])
+        command.extend(["Save()", "Close()"])
+        with open("import.bci", 'w') as f:
+            f.write('\n'.join(command))
+        _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('import.bci')"])
+        os.remove("import.bci")
 
     @staticmethod
     def remove_color(file_dir, colors):
@@ -519,6 +612,8 @@ class PDFTools:
             os.remove(f)
         for f in pdf_list:
             os.remove(f)
+
+
 
     @staticmethod
     def pdf_color_v2(page, page_number):
