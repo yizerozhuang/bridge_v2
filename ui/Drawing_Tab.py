@@ -115,11 +115,11 @@ class Drawing_Tab(BD_Base_Frame):
     @property
     def current_pages(self):
         return self.drawing_line_edit_current_page.text() if not self.drawing_line_edit_current_page.text().isdigit() else int(self.drawing_line_edit_current_page.text())
-    @property
-    def output_content_pages(self):
-        if self.service=="":
-            return
-        return self.sketch_pages * len(Drawing_Tab.service_suffix[self.service])
+    # @property
+    # def output_content_pages(self):
+    #     if self.service=="":
+    #         return
+    #     return self.sketch_pages * len(Drawing_Tab.service_suffix[self.service])
     @property
     def table_row_count(self):
         return int(self.drawing_revision_table.get_row_count())
@@ -156,15 +156,15 @@ class Drawing_Tab(BD_Base_Frame):
     def move_to_center(self):
         assert self.sketch_pages == self.current_pages
         assert self.paper_size in ['A3','A1','A0'], f"the paper size {self.paper_size} is not a valid paper size"
-        # for i in range(1, PDFTools.page_count(self.sketch_dir) + 1):
-        #     markups = PDFTools.return_markup_by_page(self.sketch_dir, i)
-        #     markups = PDFTools.filter_markup_by(markups, {"subject": "Rectangle", "color": "#7C0000"})
-        #     assert len(markups) > 0, f"Page {i} don't have any rectangular"
-        #     assert len(markups) == 1, f"Page {i} have more than one rectangular"
+        for i in range(1, PDFTools.page_count(self.sketch_dir) + 1):
+            markups = PDFTools.return_markup_by_page(self.sketch_dir, i)
+            markups = PDFTools.filter_markup_by(markups, {"subject": "Rectangle", "color": "#7C0000"})
+            assert len(markups) > 0, f"Page {i} don't have any rectangular"
+            assert len(markups) == 1, f"Page {i} have more than one rectangular"
 
         move_file_to_ss(self.output_dir, os.path.join(self.app.current_folder_address, "SS"))
         shutil.copy(self.template_dir, self.output_dir)
-        duplicate_page(self.template_dir, self.output_dir, self.output_content_pages)
+        duplicate_page(self.template_dir, self.output_dir, self.sketch_pages)
 
         # process = BD_Move_To_Center_Process("Moving sketch to paper center.", self.ui, sketch_dir, paper_size)
         # process.error_occurred.connect(self.handle_thread_error)
@@ -174,13 +174,13 @@ class Drawing_Tab(BD_Base_Frame):
     
     def set_up_drawing(self):
         process = BD_Setup_Drawing_Process("Changing sketch to drawing.", self.ui, self.sketch_dir, self.output_dir)
-        # if not process.is_available():
-        #     if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
-        #         wait_process = BD_Wait_Process(
-        #             "Waiting for someone else to finish the task, will start the task once it's available", self.ui)
-        #         wait_process.start_process()
-        #     else:
-        #         return
+        if not process.is_available():
+            if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
+                wait_process = BD_Wait_Process(
+                    "Waiting for someone else to finish the task, will start the task once it's available", self.ui)
+                wait_process.start_process()
+            else:
+                return
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.fill_content)
         process.start_process()
@@ -204,6 +204,10 @@ class Drawing_Tab(BD_Base_Frame):
                     "issue": "FOR APPROVAL"
                 }
             )
+
+        if len(Drawing_Tab.service_suffix[self.service]) == 2:
+            PDFTools.duplicate_page(self.output_dir, self.output_dir, 1)
+
         process = BD_Fill_Content_Process('Setting frame information.', self.ui, self.cover_page_dir, self.output_dir, content_replace_dict_list, self.service, self.sketch_dir)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.paste_logo)

@@ -1,3 +1,4 @@
+import json
 import os.path
 import traceback
 from pathlib import Path
@@ -17,6 +18,10 @@ import subprocess
 
 
 
+position_left_top_corner = (356, 190)
+position_right_top_corner = (1438, 190)
+position_left_bottom_corner = (356, 952)
+position_right_bottom_corner = (1438, 952)
 
 position_doc_1, position_doc_2 = (210, 168), (270, 168)
 position_left2_close,position_right_close=(240, 168),(950, 168)
@@ -31,6 +36,7 @@ position_opacity=(1750,500)
 position_sync=(1590,1023)
 position_add2layer = [(480, 500), (543, 650), (771, 647), (780, 674)]
 
+position_erase_color=(455, 100)
 position_colorprocess=(23,105)
 position_color_screen=(850,280)
 position_grayscale=(850,324)
@@ -291,12 +297,12 @@ class Simulator:
                 sim.click_at(position_right)
                 keyboard.press_and_release(keyboard_past2sameloc)
                 sleep('time_paste2sameposition',pages)
-                # sim.click_at(position_flatten_logo)
-                # sleep('time_normalwait',pages)
-                # sim.click_at(position_flatten_selectedmarkup)
-                # sleep('time_normalwait',pages)
-                # sim.click_at(position_flatten_button)
-                # sleep('time_flattenpic',pages)
+                sim.click_at(position_flatten_logo)
+                sleep('time_normalwait',pages)
+                sim.click_at(position_flatten_selectedmarkup)
+                sleep('time_normalwait',pages)
+                sim.click_at(position_flatten_button)
+                sleep('time_flattenpic',pages)
                 if i < pages - 1:
                     keyboard.press_and_release(keyboard_tonextpage)
                     sleep('time_nextpage',pages)
@@ -738,8 +744,67 @@ class Simulator:
         except:
             traceback.print_exc()
 
+    @staticmethod
+    def erase_content(folder_dir):
+        try:
+            with open(os.path.join(folder_dir,'file_names_erase_content.json'), 'r') as f:
+                data = json.load(f)
+            input_dir = data["input_dir"]
+            output_dir = data["output_dir"]
+            folder_path = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name)
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+            file_a = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name, 'File A.pdf')
+            shutil.copy(input_dir, file_a)
+            pages = PDFTools_v2.page_count(file_a)
+            points_list=[]
+            for i in range(pages):
+                point_four = Simulator.get_rect(file_a, (position_left_top_corner, position_right_bottom_corner), page_number=i+1, color='#7C0000')
+                points_list.append(point_four)
+            print(points_list)
+            sleep('time_normalwait',pages)
+            open_in_bluebeam(file_a)
+            sleep('time_open_FileA',pages)
+            sim = Simulator()
+            keyboard.press_and_release(keyboard_tofirstpage)
+            sleep('time_change2FileA',pages)
+            sim.click_at(position_full_page)
+            sleep('time_fullpage',pages)
+            for i in range(pages):
+                points = points_list[i]
+                keyboard.press_and_release(keyboard_chooseall)
+                sleep('time_normalwait',pages)
+                keyboard.press_and_release(keyboard_delete)
+                sleep('time_normalwait',pages)
+                sim.click_at(position_erase_color)
+                sleep('time_erase_color', pages)
+                erase_content_part_1 = [position_left_top_corner, (points[3][0], position_left_top_corner[1]), points[3],
+                                        (position_right_bottom_corner[0], points[3][1]), position_right_bottom_corner,
+                                        position_left_bottom_corner, position_left_top_corner]
+                for position_erase in erase_content_part_1:
+                    sim.click_at(position_erase)
+                time.sleep(5)
+                erase_content_part_2 = [(points[3][0], position_left_top_corner[1]), position_right_top_corner,
+                                        (position_right_top_corner[0], points[2][1]), points[2], points[1],
+                                        points[0],(points[3][0], position_left_top_corner[1])]
+                for position_erase in erase_content_part_2:
+                    sim.click_at(position_erase)
+                sleep('time_paste2sameposition',pages)
+                if i < pages - 1:
+                    keyboard.press_and_release(keyboard_tonextpage)
+                    sleep('time_nextpage',pages)
+                else:
+                    keyboard.press_and_release(keyboard_save)
+                    sleep('time_save',pages)
+                    sim.click_at(position_close)
+                    sleep('time_normalwait',pages)
+                    keyboard.press_and_release('n')
 
-
+            shutil.copy(file_a, output_dir)
+            sleep('time_normalwait',pages)
+            os.rename(folder_dir, folder_dir+'-finished')
+        except:
+            traceback.print_exc()
 
 
 def get_color():
@@ -795,6 +860,8 @@ while True:
                         time.sleep(1)
                         if os.path.exists(os.path.join(folder_dir,folder,'file_names_copymarkup.txt')):
                             Simulator.copy_markup(os.path.join(folder_dir,folder))
+                        if os.path.exists(os.path.join(folder_dir,folder,'file_names_erase_content.json')):
+                            Simulator.erase_content(os.path.join(folder_dir,folder))
                         elif os.path.exists(os.path.join(folder_dir,folder,'file_names_setupdrawing.txt')):
                             Simulator.setup_drawing(os.path.join(folder_dir,folder))
                         elif os.path.exists(os.path.join(folder_dir,folder,'file_names_overlay.txt')):

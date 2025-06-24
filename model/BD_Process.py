@@ -1,3 +1,4 @@
+import json
 import shutil
 import sys
 
@@ -281,16 +282,33 @@ class BD_Setup_Drawing_Process(BD_Process):
         sketch_page_count = PDFTools.page_count(self.sketch_dir)
         output_page_count = PDFTools.page_count(self.output_dir)
 
-        if sketch_page_count == output_page_count:
-            for i in range(1, sketch_page_count+1):
-                PDFTools.replace_pages(self.output_dir, self.sketch_dir, i, i)
-        elif output_page_count == 2*sketch_page_count:
-            for i in range(1, sketch_page_count+1):
-                PDFTools.replace_pages(self.output_dir, self.sketch_dir, i, 2*i-1)
-                PDFTools.replace_pages(self.output_dir, self.sketch_dir, i, 2*i)
-        else:
-            raise ValueError
+        sketch_temp_output = os.path.join(conf["b_temp_dir"], "erase_content.pdf")
+        file_time = str(datetime.now().strftime("%Y%m%d%H%M%S"))
+        file_dir_trans = os.path.join(conf["trans_dir"], file_time)
+        json_name = os.path.join(file_dir_trans, 'file_names_erase_content.json')
+        os.makedirs(os.path.dirname(json_name), exist_ok=True)
+        with open(json_name, 'w') as f:
+            json.dump({
+                "input_dir":self.sketch_dir,
+                "output_dir": sketch_temp_output
+                }, f
+            )
+        while True:
+            time.sleep(2)
+            if self.is_available():
+                break
+
+        # if sketch_page_count == output_page_count:
+        for i in range(1, sketch_page_count+1):
+            PDFTools.replace_pages(self.output_dir, sketch_temp_output, i, i)
+        # elif output_page_count == 2*sketch_page_count:
+        #     for i in range(1, sketch_page_count+1):
+        #         PDFTools.replace_pages(self.output_dir, sketch_temp_output, i, 2*i-1)
+        #         PDFTools.replace_pages(self.output_dir, sketch_temp_output, i, 2*i)
+        # else:
+        #     raise ValueError
         flatten_pdf(self.output_dir, self.output_dir, ["snapshot"])
+        import_markups(self.output_dir, self.sketch_dir)
 
 class BD_Fill_Content_Process(BD_Process):
     # TODO: need to fix the name error
@@ -318,7 +336,6 @@ class BD_Fill_Content_Process(BD_Process):
         #         PDFTools.paste_markup_to_file(
         #             r"T:\00-Template-Do Not Modify\09-AutoCAD and Bluebeam\Copilot Template\Electrical\A1\Restaurant\100\lighting markup.pdf",
         #             self.output_file, 1, i)
-        import_markups(self.output_file, self.sketch_dir)
         combine_pdf([self.cover_page, self.output_file], self.output_file)
         pages = get_number_of_page(self.output_file)
         assert pages == len(self.content_replace_dict_list), f"the number of page is {pages}, the table has {len(self.content_replace_dict_list)} row"

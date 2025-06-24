@@ -37,6 +37,7 @@ class PDFTools:
     BLUEBEAM_ENGINE_DIR = r"C:\Program Files\Bluebeam Software\Bluebeam Revu\2017\Script\ScriptEngine.exe"
     INKSCAPE_DIRECTORY = r"C:\Progra~1\Inkscape\bin\inkscape.exe"
     TEMP_PATH = r"D:\Workspace\repos\pdf_tools"
+    C_TEMP_PATH = r"C:\Copilot_template"
     @classmethod
     def SetEnvironment(cls, BLUEBEAM_DIR, BLUEBEAM_ENGINE_DIR, INKSCAPE_DIRECTORY, TEMP_PATH):
         cls.BLUEBEAM_DIR = BLUEBEAM_DIR
@@ -325,7 +326,7 @@ class PDFTools:
         size = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('get_page_size.bci')"])
         size = size.decode("utf-8").split("\r\n")[1:3]
         os.remove("get_page_size.bci")
-        return size
+        return (float(size[0]),float(size[1]))
 
 
     @staticmethod
@@ -382,6 +383,9 @@ class PDFTools:
 
     @staticmethod
     def duplicate_page(input_file, output_file, n):
+        if input_file == output_file:
+            input_file = os.path.join(PDFTools.C_TEMP_PATH, "insert_page.pdf")
+            shutil.copy(output_file, input_file)
         for _ in range(n):
             PDFTools.insert_pages(input_file, output_file)
 

@@ -224,18 +224,11 @@ class Sketch_Tab(BD_Base_Frame):
             self.ui.sketch_markup_table
         )
         self.sketch_markup_push_button_copy_markup = self.ui.sketch_markup_push_button_copy_markup
-        self.sketch_markup_push_button_copy_markup.clicked.connect(self.copy_markup)
+        # self.sketch_markup_push_button_copy_markup.clicked.connect(self.copy_markup)
 
 
     def copy_markup(self):
         assert get_pdf_page_numbers(self.current_sketch_dir) == get_pdf_page_numbers(self.current_table_item), "The input page number is not the same as the output page number"
-        # if not process.is_available():
-        #     if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
-        #         wait_process = BD_Wait_Process(
-        #             "Waiting for someone else to finish the task, will start the task once it's avaliable", self.ui)
-        #         wait_process.start_process()
-        #     else:
-        #         return
         process = BD_Copy_Markup_Process("Copying markup, open in Bluebeam when done.", self.ui,
                                          self.current_sketch_dir, self.current_table_item)
         process.error_occurred.connect(self.handle_thread_error)

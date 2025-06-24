@@ -28,6 +28,7 @@ from datetime import datetime
 conf = {
     "bluebeam_dir":r"C:\Program Files\Bluebeam Software\Bluebeam Revu\2017\Revu\Revu.exe",
     "bluebeam_engine_dir": r'C:\Program Files\Bluebeam Software\Bluebeam Revu\2017\Script\ScriptEngine.exe',
+    "database_dir": r"B:\02.Copilot\Database",
     "c_temp_dir": r"C:\Copilot_template"
 }
 
@@ -853,8 +854,8 @@ def insert_logo_into_pdf(pdf_path, image_path, page_number, orientation, paper_s
             rec_height = 100
         else:
             #A0
-            rec_x = 1266
-            rec_y = 45
+            rec_x = 1280
+            rec_y = 50
             rec_width = 600
             rec_height = 110
 
@@ -864,10 +865,10 @@ def insert_logo_into_pdf(pdf_path, image_path, page_number, orientation, paper_s
         insert_image_into_pdf(pdf_path, image_path, page_number, img_x, img_y, img_width, img_height, rotation=270)
     elif orientation == "landscape":
         if paper_size == 'A3':
-            rec_x = 670
-            rec_y = 15
-            rec_width = 95
-            rec_height = 75
+            rec_x = 742
+            rec_y = 670
+            rec_width = 75
+            rec_height = 95
         elif paper_size == 'A1':
             rec_x = 1530
             rec_y = 966
@@ -875,10 +876,10 @@ def insert_logo_into_pdf(pdf_path, image_path, page_number, orientation, paper_s
             rec_height = 250
         else:
             # A0
-            rec_x = 1266
-            rec_y = 45
-            rec_width = 600
-            rec_height = 110
+            rec_x = 2230
+            rec_y = 1280
+            rec_width = 110
+            rec_height = 600
         img = Image.open(image_path)
         img_width, img_height = img.size
         img_x, img_y, img_width, img_height = get_logo_position(rec_x, rec_y, rec_width, rec_height, img_width,img_height, 0)
