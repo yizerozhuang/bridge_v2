@@ -22,12 +22,15 @@ class BD_Single_Table_Frame(BD_Base_Frame):
         self.line_edit.setText(dir)
 
     def click(self):
-        input_file_dir = QFileDialog.getExistingDirectory(None, "Select Directory")
+        input_file_dir = QFileDialog.getExistingDirectory(None, "Select Directory", self.app.current_folder_address)
+        self.line_edit.setText("")
         self.line_edit.setText(input_file_dir)
 
     def on_text_changed(self):
-        file_list = os.listdir(self.line_edit.text())
         self.table.setRowCount(0)
+        if self.line_edit.text()=="":
+            return
+        file_list = os.listdir(self.line_edit.text())
         for i, file in enumerate(file_list):
             self.table.insertRow(i)
             table_item = QTableWidgetItem(file)

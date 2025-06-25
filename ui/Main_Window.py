@@ -1,6 +1,7 @@
 from model.ui.BD_Base_Frame import BD_Base_Frame
 
 from ui.Info_Tab import Info_Tab
+from ui.Combine_Tab import Combine_Tab
 from ui.Sketch_Tab import Sketch_Tab
 from ui.Drawing_Tab import Drawing_Tab
 from utility.sql_function import format_output, get_value_from_table_with_filter
@@ -29,6 +30,7 @@ class Main_Window(QMainWindow):
         self.info_tab = Info_Tab(self)
         self.sketch_tab = Sketch_Tab(self)
         self.drawing_tab = Drawing_Tab(self)
+        self.combine_tab = Combine_Tab(self)
 
     def load_project(self, quotation_number):
         project = format_output(get_value_from_table_with_filter("projects", "quotation_number", quotation_number))[quotation_number]

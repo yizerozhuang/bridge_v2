@@ -501,9 +501,9 @@ class Simulator:
                 file_content = file.read()
                 content = ast.literal_eval(file_content)
             lumionoff=content['lumionoff']
-            changecoloronoff=content['changecoloronoff']
+            # changecoloronoff=content['changecoloronoff']
             sketch=content['file']
-            color_change_small=content['color_change']
+            # color_change_small=content['color_change']
             lumi_set=content['lumi_set']
             folder_path = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name)
             if not os.path.exists(folder_path):
@@ -518,68 +518,67 @@ class Simulator:
             sim = Simulator()
             keyboard.press_and_release(keyboard_tofirstpage)
             sleep('time_change2fisrtpage',pages)
-            print(color_change_small)
-            color_change=[item.upper() for item in color_change_small]
-            if changecoloronoff:
-                for i in range(pages):
-                    sim.click_at(position_colorprocess)
-                    sleep('time_normalwait',pages)
-                    sim.click_at(position_selectcolor)
-                    color_dict=get_color()
-                    color_dict_keys=list(color_dict.keys())
-                    print(color_dict_keys)
-                    sim.click_at(position_color_close)
-                    sleep('time_normalwait',pages)
-                    for j in range(len(color_change)):
-                        if color_change[j] in color_dict_keys:
-                            sim.click_at(position_colorprocess)
-                            sleep('time_normalwait',pages)
-                            sim.click_at(position_selectcolor)
-                            color_dict2 = get_color()
-                            sleep('time_normalwait',pages)
-                            position_color=color_dict2[color_change[j]]
-                            sim.click_at(position_color)
-                            sleep('time_normalwait',pages)
-                            sim.click_at(position_colorto)
-                            sleep('time_normalwait',pages)
-                            sim.click_at(position_colortotransparent)
-                            sleep('time_normalwait',pages)
-                            sim.click_at(position_color_ok)
-                            sleep('time_changepiccolor',pages)
-                    sim.click_at(position_color_ok)
-                    if i < pages - 1:
-                        keyboard.press_and_release(keyboard_tonextpage)
-                        sleep('time_nextpage',pages)
-                    else:
-                        if lumionoff:
-                            sim.click_at(position_colorprocess)
-                            sim.click_at(position_color_screen)
-                            sim.click_at(position_changeumi)
-                            lumi_click=int(float(lumi_set)/0.05)
-                            for k in range(lumi_click):
-                                sim.click_at(position_addlumi)
-                            sim.click_at(position_color_processimage)
-                            sim.click_at(position_color_ok)
-                            sleep('time_changecolor',pages)
-                        sim.click_at(position_left)
-                        keyboard.press_and_release(keyboard_save)
-                        sleep('time_save',pages)
-                        sim.click_at(position_close)
-            else:
-                if lumionoff:
-                    sim.click_at(position_colorprocess)
-                    sim.click_at(position_color_screen)
-                    sim.click_at(position_changeumi)
-                    lumi_click = int(float(lumi_set) / 0.05)
-                    for k in range(lumi_click):
-                        sim.click_at(position_addlumi)
-                    sim.click_at(position_color_processimage)
-                    sim.click_at(position_color_ok)
-                    sleep('time_changecolor',pages)
-                sim.click_at(position_left)
-                keyboard.press_and_release(keyboard_save)
-                sleep('time_save',pages)
-                sim.click_at(position_close)
+            # print(color_change_small)
+            # color_change=[item.upper() for item in color_change_small]
+            # if changecoloronoff:
+            #     for i in range(pages):
+            #         sim.click_at(position_colorprocess)
+            #         sleep('time_normalwait',pages)
+            #         sim.click_at(position_selectcolor)
+            #         color_dict=get_color()
+            #         color_dict_keys=list(color_dict.keys())
+            #         print(color_dict_keys)
+            #         sim.click_at(position_color_close)
+            #         sleep('time_normalwait',pages)
+            #         for j in range(len(color_change)):
+            #             if color_change[j] in color_dict_keys:
+            #                 sim.click_at(position_colorprocess)
+            #                 sleep('time_normalwait',pages)
+            #                 sim.click_at(position_selectcolor)
+            #                 color_dict2 = get_color()
+            #                 sleep('time_normalwait',pages)
+            #                 position_color=color_dict2[color_change[j]]
+            #                 sim.click_at(position_color)
+            #                 sleep('time_normalwait',pages)
+            #                 sim.click_at(position_colorto)
+            #                 sleep('time_normalwait',pages)
+            #                 sim.click_at(position_colortotransparent)
+            #                 sleep('time_normalwait',pages)
+            #                 sim.click_at(position_color_ok)
+            #                 sleep('time_changepiccolor',pages)
+            #         sim.click_at(position_color_ok)
+            #         if i < pages - 1:
+            #             keyboard.press_and_release(keyboard_tonextpage)
+            #             sleep('time_nextpage',pages)
+            #         else:
+            #             if lumionoff:
+            #                 sim.click_at(position_colorprocess)
+            #                 sim.click_at(position_color_screen)
+            #                 sim.click_at(position_changeumi)
+            #                 lumi_click=int(float(lumi_set)/0.05)
+            #                 for k in range(lumi_click):
+            #                     sim.click_at(position_addlumi)
+            #                 sim.click_at(position_color_processimage)
+            #                 sim.click_at(position_color_ok)
+            #                 sleep('time_changecolor',pages)
+            #             sim.click_at(position_left)
+            #             keyboard.press_and_release(keyboard_save)
+            #             sleep('time_save',pages)
+            #             sim.click_at(position_close)
+            if lumionoff:
+                sim.click_at(position_colorprocess)
+                sim.click_at(position_color_screen)
+                sim.click_at(position_changeumi)
+                lumi_click = int(float(lumi_set) / 0.05)
+                for k in range(lumi_click):
+                    sim.click_at(position_addlumi)
+                sim.click_at(position_color_processimage)
+                sim.click_at(position_color_ok)
+                sleep('time_changecolor',pages)
+            sim.click_at(position_left)
+            keyboard.press_and_release(keyboard_save)
+            sleep('time_save',pages)
+            sim.click_at(position_close)
             sleep('time_normalwait',pages)
             shutil.copy(file_sketch_pc,sketch)
             sleep('time_normalwait',pages)

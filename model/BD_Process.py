@@ -155,11 +155,11 @@ class BD_Align_Process(BD_Process):
 
 
 class BD_Color_Process(BD_Process):
-    def __init__(self, info, ui, current_sketch_dir, page_number, selected_colors, luminocity_checked, luminocity_value):
+    def __init__(self, info, ui, current_sketch_dir, page_number, luminocity_checked, luminocity_value):
         super().__init__(info, ui)
         self.current_sketch_dir = current_sketch_dir
         self.page_number = page_number
-        self.selected_colors = selected_colors
+        # self.selected_colors = selected_colors
         self.luminocity_checked = luminocity_checked
         self.luminocity_value = luminocity_value
 
@@ -174,10 +174,10 @@ class BD_Color_Process(BD_Process):
         with open(file_path, 'w') as file:
             file_names = {
                 'lumionoff': self.luminocity_checked,
-                'changecoloronoff': len(self.selected_colors)==0,
+                # 'changecoloronoff': len(self.selected_colors)==0,
                 'file': self.current_sketch_dir,
                 'pagenum': self.page_number,
-                'color_change': self.selected_colors,
+                # 'color_change': self.selected_colors,
                 'lumi_set': self.luminocity_value
             }
             file.write(str(file_names))

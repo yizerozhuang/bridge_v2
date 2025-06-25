@@ -88,5 +88,5 @@ def create_backup():
     cursor.execute(backup_command)
 
 # if __name__ == '__main__':
-    # check_if_column_in_tabel("clients", "quotation_number")
-    # delete_project("505000AM")
+#     check_if_column_in_tabel("clients", "quotation_number")
+#     delete_project("506000BK")

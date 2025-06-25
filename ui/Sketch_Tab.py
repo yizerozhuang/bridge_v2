@@ -9,7 +9,7 @@ from model.BD_Process import (messagebox, BD_Rescale_Process, BD_Align_Process,
                               BD_Copy_Markup_Process, BD_Wait_Process)
 
 from utility.pdf_utility import (convert_mm_to_pixel, get_timestamp, get_pdf_page_numbers, get_paper_sizes,
-                                 generate_possible_colors,
+                                 generate_possible_colors, move_file_to_ss,
                                  get_pdf_page_sizes, open_in_bluebeam)
 from utility.sql_function import get_value_from_table, format_output, order_dict
 
@@ -31,23 +31,26 @@ class Sketch_Tab(BD_Base_Frame):
         super().__init__(app)
         self.rescale_tab()
         self.align_tab()
-        self.markup_tab()
-        self.checklist_tab()
+        # self.markup_tab()
+        # self.checklist_tab()
 
     @property
     def input_file_dir(self):
         return self.rescale_single_file_window.get_input_file()
     @property
-    def current_sketch_dir(self):
-        return os.path.join(self.app.current_folder_address, "set_up_sketch.pdf")
+    def output_dir(self):
+        return os.path.join(self.app.current_folder_address, f"{self.app.project_name}-Mechanical Sketch.pdf")
     @property
     def page_number(self):
-        if os.path.exists(self.current_sketch_dir):
-            return get_pdf_page_numbers(self.current_sketch_dir)
+        if os.path.exists(self.output_dir):
+            return get_pdf_page_numbers(self.output_dir)
         return 0
     @property
     def input_scale(self):
         return self.rescale_original_scale_radio_button_window.get_selection_value()
+    @property
+    def input_size(self):
+        return self.rescale_original_scale_radio_button_window.get_selection_text().split("(")[0]
     @property
     def input_size_x(self):
         if self.rescale_original_size_radio_button_window.get_selection_value()[0] == "":
@@ -74,27 +77,27 @@ class Sketch_Tab(BD_Base_Frame):
         if self.rescale_output_size_radio_button_window.get_selection_value()[1] == "":
             return 0
         return convert_mm_to_pixel(self.rescale_output_size_radio_button_window.get_selection_value()[1])
-    @property
-    def selected_colors(self):
-        return generate_possible_colors(self.color_window.get_selected_colors())
+    # @property
+    # def selected_colors(self):
+    #     return generate_possible_colors(self.color_window.get_selected_colors())
     @property
     def luminocity_checked(self):
-        return self.color_window.luminocity_is_checked()
+        return self.sketch_align_check_box_luminocity.isChecked()
     @property
     def luminocity_value(self):
-        return self.color_window.get_luminoicity()
+        return self.sketch_align_line_edit_luminocity.text()
     @property
     def selected_floors(self):
         return self.floor_table.get_current_content()
     @property
     def grayscale_checked(self):
-        return self.color_window.grayscale_is_checked()
+        return self.sketch_align_check_box_grayscale.isChecked()
     @property
     def add_tags_checked(self):
-        return self.color_window.add_tags_is_checked()
-    @property
-    def current_table_item(self):
-        return self.table_window.get_current_item_path()
+        return self.sketch_align_check_box_add_tags.isChecked()
+    # @property
+    # def current_table_item(self):
+    #     return self.table_window.get_current_item_path()
     def rescale_tab(self):
         self.rescale_single_file_window = BD_Single_File_Frame(
             self.app,
@@ -134,29 +137,30 @@ class Sketch_Tab(BD_Base_Frame):
         self.sketch_rescale_button.clicked.connect(self.rescale)
 
     def rescale(self):
+        move_file_to_ss(self.output_dir, os.path.join(self.app.current_folder_address, "SS"))
+
         if self.input_scale == self.output_scale and self.input_size_x == self.output_size_x and self.input_size_y == self.output_size_y:
-            shutil.copy(self.input_file_dir, self.current_sketch_dir)
+            shutil.copy(self.input_file_dir, self.output_dir)
             self.rescale_success()
             return
         original_input_size_x, original_input_size_y = get_pdf_page_sizes(self.input_file_dir)
         if round(original_input_size_x, 2) != self.input_size_x or round(original_input_size_y, 2) != self.input_size_y:
-            input_size = self.rescale_original_size_radio_button_window.get_selection_text().split("(")[0]
-            raise ValueError(f"The input size is not {input_size}")
+            raise ValueError(f"The input size is not {self.input_size}")
 
         process = BD_Rescale_Process("Rescaling, open in Bluebeam when done.", self.ui, self.input_file_dir,
                                      self.input_scale, self.input_size_x, self.input_size_y,
-                                     self.output_scale, self.output_size_x, self.output_size_y, self.current_sketch_dir)
+                                     self.output_scale, self.output_size_x, self.output_size_y, self.output_dir)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.rescale_success)
         process.start_process()
 
     def rescale_success(self):
-        open_in_bluebeam(self.current_sketch_dir)
+        open_in_bluebeam(self.output_dir)
         self.sketch_align_line_edit_total_page.setText(str(self.page_number))
         self.sketch_align_line_edit_scale.setText(str(self.output_scale))
         self.sketch_align_line_edit_paper_size.setText(self.output_size)
-        self.color_window.set_total_pages_number(self.page_number)
-        self.table_window.set_current_folder(self.app.current_folder_address)
+        # self.color_window.set_total_pages_number(self.page_number)
+        # self.table_window.set_current_folder(self.app.current_folder_address)
         self.ui.toolBox.setCurrentIndex(1)
 
     def align_tab(self):
@@ -168,31 +172,40 @@ class Sketch_Tab(BD_Base_Frame):
         self.floor_table = BD_Table_Frame(self.app, self.ui.sketch_floor_table, True)
         self.floor_table.table.cellChanged.connect(self.on_cell_changed)
 
-        self.color_window = BD_Color_Frame(
-            self.app,
-            self.ui.sketch_align_combo_box_page,
-            self.ui.sketch_align_frame_source_color_from,
-            self.ui.sketch_align_frame_source_color_to,
-            self.ui.sketch_align_label_before,
-            self.ui.sketch_align_label_after,
-            self.ui.sketch_align_check_box_luminocity,
-            self.ui.sketch_align_line_edit_luminocity,
-            self.ui.sketch_align_check_box_grayscale,
-            self.ui.sketch_align_check_box_add_tags
-        )
+        # self.color_window = BD_Color_Frame(
+        #     self.app,
+        #     self.ui.sketch_align_combo_box_page,
+        #     self.ui.sketch_align_frame_source_color_from,
+        #     self.ui.sketch_align_frame_source_color_to,
+        #     self.ui.sketch_align_label_before,
+        #     self.ui.sketch_align_label_after,
+        #     self.ui.sketch_align_check_box_luminocity,
+        #     self.ui.sketch_align_line_edit_luminocity,
+        #     self.ui.sketch_align_check_box_grayscale,
+        #     self.ui.sketch_align_check_box_add_tags
+        # )
+        self.sketch_align_check_box_luminocity = self.ui.sketch_align_check_box_luminocity
+        self.sketch_align_line_edit_luminocity = self.ui.sketch_align_line_edit_luminocity
+        self.sketch_align_check_box_grayscale = self.ui.sketch_align_check_box_grayscale
+        self.sketch_align_check_box_add_tags = self.ui.sketch_align_check_box_add_tags
         self.sketch_align_push_button_process = self.ui.sketch_align_push_button_process
         self.sketch_align_push_button_process.clicked.connect(self.align)
 
 
     def align(self):
-        process = BD_Align_Process("Aligning Sketch, open in Bluebeam when done.", self.ui, self.current_sketch_dir)
+
+        assert self.luminocity_value.isdigit() and 0<float(self.luminocity_value)<1, "The luminocity value is incorrect"
+
+        process = BD_Align_Process("Aligning Sketch, open in Bluebeam when done.", self.ui, self.output_dir)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.color_modify)
         process.start_process()
 
     def color_modify(self):
-        process = BD_Color_Process("Modifying color and changing luminosity, open in Bluebeam when done.", self.ui, self.current_sketch_dir,
-                                   self.page_number, self.selected_colors, self.luminocity_checked, self.luminocity_value)
+        # process = BD_Color_Process("Modifying color and changing luminosity, open in Bluebeam when done.", self.ui, self.output_dir,
+        #                            self.page_number, self.selected_colors, self.luminocity_checked, self.luminocity_value)
+        process = BD_Color_Process("Modifying color and changing luminosity, open in Bluebeam when done.", self.ui, self.output_dir,
+                                   self.page_number, self.luminocity_checked, self.luminocity_value)
         if not process.is_available():
             if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
                 wait_process = BD_Wait_Process(
@@ -206,37 +219,37 @@ class Sketch_Tab(BD_Base_Frame):
 
     def add_tags(self):
         process = BD_Grayscale_and_Tags_Process("Grayscale and adding tags on Sketch, open in Bluebeam when done.", self.ui,
-                                                self.current_sketch_dir, self.selected_floors, self.grayscale_checked,
+                                                self.output_dir, self.selected_floors, self.grayscale_checked,
                                                 self.add_tags_checked, self.output_scale, self.output_size)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.process_success)
         process.start_process()
 
     def process_success(self):
-        open_in_bluebeam(self.current_sketch_dir)
+        open_in_bluebeam(self.output_dir)
         self.ui.toolBox.setCurrentIndex(2)
 
     def markup_tab(self):
-        self.table_window = BD_Single_Table_Frame(
-            self.app,
-            self.ui.sketch_markup_line_edit,
-            self.ui.sketch_markup_push_button,
-            self.ui.sketch_markup_table
-        )
+        # self.table_window = BD_Single_Table_Frame(
+        #     self.app,
+        #     self.ui.sketch_markup_line_edit,
+        #     self.ui.sketch_markup_push_button,
+        #     self.ui.sketch_markup_table
+        # )
         self.sketch_markup_push_button_copy_markup = self.ui.sketch_markup_push_button_copy_markup
         # self.sketch_markup_push_button_copy_markup.clicked.connect(self.copy_markup)
 
 
     def copy_markup(self):
-        assert get_pdf_page_numbers(self.current_sketch_dir) == get_pdf_page_numbers(self.current_table_item), "The input page number is not the same as the output page number"
+        assert get_pdf_page_numbers(self.output_dir) == get_pdf_page_numbers(self.current_table_item), "The input page number is not the same as the output page number"
         process = BD_Copy_Markup_Process("Copying markup, open in Bluebeam when done.", self.ui,
-                                         self.current_sketch_dir, self.current_table_item)
+                                         self.output_dir, self.current_table_item)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.copy_success)
         process.start_process()
 
     def copy_success(self):
-        open_in_bluebeam(self.current_sketch_dir)
+        open_in_bluebeam(self.output_dir)
         self.ui.toolBox.setCurrentIndex(3)
 
     def checklist_tab(self):
@@ -248,7 +261,7 @@ class Sketch_Tab(BD_Base_Frame):
         if os.path.exists(output_dir):
             shutil.move(output_dir, os.path.join(self.app.current_folder_address, "SS",
                                                  f"{get_timestamp()}-{self.app.project_name}-Mechanical Sketch.pdf"))
-        os.rename(self.current_sketch_dir, output_dir)
+        os.rename(self.output_dir, output_dir)
         open_in_bluebeam(output_dir)
         BD_Info_Message("The Sketch procedure is completed")
 

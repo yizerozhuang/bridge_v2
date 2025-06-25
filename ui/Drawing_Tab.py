@@ -208,7 +208,7 @@ class Drawing_Tab(BD_Base_Frame):
         if len(Drawing_Tab.service_suffix[self.service]) == 2:
             PDFTools.duplicate_page(self.output_dir, self.output_dir, 1)
 
-        process = BD_Fill_Content_Process('Setting frame information.', self.ui, self.cover_page_dir, self.output_dir, content_replace_dict_list, self.service, self.sketch_dir)
+        process = BD_Fill_Content_Process('Setting title block information.', self.ui, self.cover_page_dir, self.output_dir, content_replace_dict_list, self.service, self.sketch_dir)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.paste_logo)
         process.start_process()
