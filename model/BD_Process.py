@@ -5,7 +5,7 @@ import sys
 from PyQt5.QtCore import QThread, pyqtSignal
 from utility.pdf_utility import (resize_pdf_multiprocessing,align_multiprocessing, grays_scale_pdf_multiprocessing,
                                  add_tags_multiprocessing, flatten_pdf, get_pdf_page_numbers, pdf_move_center, get_number_of_page, combine_pdf,
-                                 insert_logo_into_pdf, import_markups)
+                                 insert_logo_into_pdf, import_markups, get_pdf_page_sizes)
 from utility.pdf_tool import PDFTools
 from PyQt5.QtWidgets import QDialog, QProgressBar, QLabel, QVBoxLayout, QMessageBox
 from PyQt5.QtCore import Qt
@@ -93,6 +93,12 @@ class BD_Process(QThread):
 
     def function(self):
         pass
+    
+    def wait_until_available(self):
+        while True:
+            time.sleep(2)
+            if self.is_available():
+                break
 
     # def stop(self):
     #     self.quit()
@@ -113,78 +119,62 @@ class BD_Process(QThread):
 
 
 class BD_Rescale_Process(BD_Process):
-    def __init__(self, info, ui, input_file_dir, input_scale, input_size_x, input_size_y,
-                 output_scale, output_size_x, output_size_y, output_file_dir):
+    def __init__(self, info, ui, input_file_dir, input_scale,input_size, input_size_x, input_size_y,
+                 output_scale, output_size_x, output_size_y, output_dir):
         super().__init__(info, ui)
         self.input_file_dir = input_file_dir
         self.input_scale = input_scale
+        self.input_size = input_size
         self.input_size_x = input_size_x
         self.input_size_y = input_size_y
         self.output_scale = output_scale
         self.output_size_x = output_size_x
         self.output_size_y = output_size_y
-        self.output_file_dir = output_file_dir
+        self.output_dir = output_dir
 
     def function(self):
+
+        if self.input_scale == self.output_scale and self.input_size_x == self.output_size_x and self.input_size_y == self.output_size_y:
+            shutil.copy(self.input_file_dir, self.output_dir)
+            return
+        original_input_size_x, original_input_size_y = get_pdf_page_sizes(self.input_file_dir)
+        if abs(int(original_input_size_x)-int(self.input_size_x)) > 2 or abs(int(original_input_size_y)-int(self.input_size_y)) > 2:
+            raise ValueError(f"The input size is not {self.input_size}")
+
         # temp_file_path = os.path.join(conf["c_temp_dir"], f"{get_timestamp()}-temp.pdf")
         pool = multiprocessing.Pool(20)
         resize_pdf_multiprocessing(pool, self.input_file_dir, self.input_scale, self.input_size_x, self.input_size_y,
-                               self.output_scale, self.output_size_x, self.output_size_y, self.output_file_dir)
+                               self.output_scale, self.output_size_x, self.output_size_y, self.output_dir)
         pool.close()
         time.sleep(2)
-        flatten_pdf(self.output_file_dir, self.output_file_dir)
-
-
-class BD_Align_Process(BD_Process):
-    def __init__(self, info, ui, current_sketch_dir):
-        super().__init__(info, ui)
-        self.current_sketch_dir = current_sketch_dir
-
-    def function(self):
-        self.worker.progress.connect(self.progress_dialog.update_progress)
-        self.worker.finished.connect(self.progress_dialog.accept)
-        self.worker.start()
-        pool = multiprocessing.Pool(20)
-        align_multiprocessing(pool, self.current_sketch_dir)
-        pool.close()
-        # except AttributeError:
-        #     messagebox("error", "you should put down the polyline", self.ui)
-        # finally:
-        #     pool.close()
+        flatten_pdf(self.output_dir, self.output_dir)
 
 
 
 class BD_Color_Process(BD_Process):
-    def __init__(self, info, ui, current_sketch_dir, page_number, luminocity_checked, luminocity_value):
+    def __init__(self, info, ui, current_sketch_dir, page_number, luminosity_checked, luminosity_value):
         super().__init__(info, ui)
         self.current_sketch_dir = current_sketch_dir
         self.page_number = page_number
         # self.selected_colors = selected_colors
-        self.luminocity_checked = luminocity_checked
-        self.luminocity_value = luminocity_value
+        self.luminosity_checked = luminosity_checked
+        self.luminosity_value = luminosity_value
 
     def function(self):
-        self.worker.progress.connect(self.progress_dialog.update_progress)
-        self.worker.finished.connect(self.progress_dialog.accept)
-        self.worker.start()
-
         file_path = os.path.join(conf["trans_dir"], datetime.now().strftime("%Y%m%d%H%M%S"), 'file_names_lumicolor.txt')
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         with open(file_path, 'w') as file:
             file_names = {
-                'lumionoff': self.luminocity_checked,
+                'lumionoff': self.luminosity_checked,
                 # 'changecoloronoff': len(self.selected_colors)==0,
                 'file': self.current_sketch_dir,
                 'pagenum': self.page_number,
                 # 'color_change': self.selected_colors,
-                'lumi_set': self.luminocity_value
+                'lumi_set': self.luminosity_value
             }
             file.write(str(file_names))
-        while True:
-            time.sleep(2)
-            if self.is_available():
-                break
+        self.wait_until_available()
 
 class BD_Grayscale_and_Tags_Process(BD_Process):
 
@@ -203,9 +193,6 @@ class BD_Grayscale_and_Tags_Process(BD_Process):
         self.output_scale = output_scale
         self.output_paper_type = output_paper_type
     def function(self):
-        self.worker.progress.connect(self.progress_dialog.update_progress)
-        self.worker.finished.connect(self.progress_dialog.accept)
-        self.worker.start()
         if self.grayscale_checked:
             pool = multiprocessing.Pool(20)
             grays_scale_pdf_multiprocessing(pool, self.current_sketch_dir)
@@ -228,11 +215,6 @@ class BD_Copy_Markup_Process(BD_Process):
         self.current_file_dir = current_file_dir
         self.existing_file_dir = existing_file_dir
     def function(self):
-        self.worker.progress.connect(self.progress_dialog.update_progress)
-        self.worker.finished.connect(self.progress_dialog.accept)
-        self.worker.start()
-
-
         import_markups(self.current_file_dir, self.existing_file_dir)
 
         # file_path = os.path.join(conf["trans_dir"], datetime.now().strftime("%Y%m%d%H%M%S"), 'file_names_copymarkup.txt')
@@ -244,11 +226,7 @@ class BD_Copy_Markup_Process(BD_Process):
         #         'copyornot':[[True]*page_number, [True]*page_number]
         #     }
         #     file.write(str(file_names))
-        # # Todo: design the waiting function
-        # while True:
-        #     time.sleep(2)
-        #     if self.is_available():
-        #         break
+        #self.pause
 
 class BD_Move_To_Center_Process(BD_Process):
     def __init__(self, info, ui, sketch_dir, paper_size):
@@ -257,6 +235,51 @@ class BD_Move_To_Center_Process(BD_Process):
         self.paper_size = paper_size
     def function(self):
         pdf_move_center(self.sketch_dir, self.paper_size)
+
+
+class BD_Align_Process(BD_Process):
+    def __init__(self, info, ui, arch_drawing, mech_drawing=None):
+        super().__init__(info, ui)
+        self.arch_drawing = arch_drawing
+        self.mech_drawing = mech_drawing
+
+    def function(self):
+        first_coordinate = None
+        if not self.mech_drawing is None:
+            markups = PDFTools.return_markup_by_page(self.mech_drawing, 1)
+            markups = PDFTools.filter_markup_by(markups, {"type": "PolyLine","color": "#7C0000"})
+            assert len(markups)==1, f"You should have only one base point in your mechanical drawings {self.mech_drawing}"
+            first_key = list(markups.keys())[0]
+            first_coordinate = {
+                "markup_id": first_key,
+                "x": float(markups[first_key]["x"]),
+                "y": float(markups[first_key]["y"]),
+                "width": float(markups[first_key]["width"]),
+                "height": float(markups[first_key]["height"])
+            }
+        pool = multiprocessing.Pool(20)
+        align_multiprocessing(pool, self.arch_drawing, first_coordinate)
+        pool.close()
+class BD_Overlay_Process(BD_Process):
+    def __init__(self, info, ui, arch_drawing, mech_drawing, overlay_color):
+        super().__init__(info, ui)
+        self.arch_drawing = arch_drawing
+        self.mech_drawing = mech_drawing
+        self.overlay_color = overlay_color
+
+    def function(self):
+        PDFTools.colorize(self.arch_drawing, self.overlay_color)
+        json_name = os.path.join(conf["trans_dir"], datetime.now().strftime("%Y%m%d%H%M%S"), 'file_names_overlay.json')
+        os.makedirs(os.path.dirname(json_name), exist_ok=True)
+        with open(json_name, 'w') as f:
+            json.dump(
+                {
+                    "arch_drawing": self.arch_drawing,
+                    "mech_drawing": self.mech_drawing
+                }, f
+            )
+
+        self.wait_until_available()
 
 
 class BD_Setup_Drawing_Process(BD_Process):
@@ -273,14 +296,10 @@ class BD_Setup_Drawing_Process(BD_Process):
     #     with open(txt_name, 'w') as file:
     #         file_names = self.sketch_dir + ';' + self.output_dir + ';'
     #         file.write(file_names)
-    #     while True:
-    #         time.sleep(2)
-    #         if self.is_available():
-    #             flatten_pdf(self.output_dir, self.output_dir, ["snapshot"])
-    #             break
+    #
     def function(self):
         sketch_page_count = PDFTools.page_count(self.sketch_dir)
-        output_page_count = PDFTools.page_count(self.output_dir)
+        # output_page_count = PDFTools.page_count(self.output_dir)
 
         sketch_temp_output = os.path.join(conf["b_temp_dir"], "erase_content.pdf")
         file_time = str(datetime.now().strftime("%Y%m%d%H%M%S"))
@@ -293,25 +312,18 @@ class BD_Setup_Drawing_Process(BD_Process):
                 "output_dir": sketch_temp_output
                 }, f
             )
-        while True:
-            time.sleep(2)
-            if self.is_available():
-                break
+        self.wait_until_available()
 
         # if sketch_page_count == output_page_count:
+        
+        
+        
         for i in range(1, sketch_page_count+1):
             PDFTools.replace_pages(self.output_dir, sketch_temp_output, i, i)
-        # elif output_page_count == 2*sketch_page_count:
-        #     for i in range(1, sketch_page_count+1):
-        #         PDFTools.replace_pages(self.output_dir, sketch_temp_output, i, 2*i-1)
-        #         PDFTools.replace_pages(self.output_dir, sketch_temp_output, i, 2*i)
-        # else:
-        #     raise ValueError
         flatten_pdf(self.output_dir, self.output_dir, ["snapshot"])
         import_markups(self.output_dir, self.sketch_dir)
 
 class BD_Fill_Content_Process(BD_Process):
-    # TODO: need to fix the name error
     def __init__(self, info, ui, cover_page, output_file, content_replace_dict_list, service, sketch_dir):
         super().__init__(info, ui)
         self.cover_page = cover_page
@@ -362,11 +374,4 @@ class BD_Wait_Process(BD_Process):
     def __init__(self, info, ui):
         super().__init__(info, ui)
         self.processing_time = 900
-    def function(self):
-        self.worker.progress.connect(self.progress_dialog.update_progress)
-        self.worker.finished.connect(self.progress_dialog.accept)
-        self.worker.start()
-        while True:
-            time.sleep(2)
-            if self.is_available():
-                break
+        self.function = self.wait_until_available

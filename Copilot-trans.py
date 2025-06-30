@@ -10,10 +10,11 @@ init_environment(conf)
 import keyboard
 import shutil
 import ast
-from datetime import datetime
+from datetime import date
 from utility.pdf_tool import PDFTools as PDFTools_v2
 PDFTools_v2.SetEnvironment(conf["bluebeam_dir"], conf["bluebeam_engine_dir"], r"C:\Progra~1\Inkscape\bin\inkscape.exe", conf["c_temp_dir"])
 import subprocess
+import pyperclip
 
 
 
@@ -37,6 +38,12 @@ position_sync=(1590,1023)
 position_add2layer = [(480, 500), (543, 650), (771, 647), (780, 674)]
 
 position_erase_color=(455, 100)
+position_overlay = (20, 130)
+position_overlay_file_b = (800, 500)
+position_overlay_opacity = (870, 530)
+position_overlay_opacity_ok = (1060, 740)
+position_overlay_ok = (1210, 620)
+
 position_colorprocess=(23,105)
 position_color_screen=(850,280)
 position_grayscale=(850,324)
@@ -88,6 +95,7 @@ keyboard_save='ctrl+s'
 keyboard_chooseall='ctrl+a'
 keyboard_copy='ctrl+c'
 keyboard_past2sameloc='ctrl+shift+v'
+keyboard_paste = 'ctrl+v'
 keyboard_delete='delete'
 keyboard_snapshot='tab+g'
 keyboard_enter='enter'
@@ -128,6 +136,11 @@ class Simulator:
         pyautogui.moveTo(x, y)
         time.sleep(0.5)
         pyautogui.click()
+    def double_click_at(self, position):
+        x, y = position
+        pyautogui.moveTo(x, y)
+        time.sleep(0.5)
+        pyautogui.doubleClick()
     def right_click_at(self,position):
         x, y = position
         pyautogui.moveTo(x, y)
@@ -319,180 +332,221 @@ class Simulator:
             traceback.print_exc()
 
 
+    # @staticmethod
+    # def overlay(folder_dir):
+    #     try:
+    #         with open(os.path.join(folder_dir,'file_names_overlay.txt'), 'r', encoding='utf-8') as file:
+    #             file_content = file.read()
+    #             content = ast.literal_eval(file_content)
+    #         file_a_dir = content['File1']
+    #         file_b_dir = content['File2']
+    #         file_c_dir = content['File3']
+    #         file_d_dir = content['File4']
+    #         color=content['Color']
+    #         layer_name=content['Name']
+    #         service_type=layer_name
+    #         folder_path = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name)
+    #         if not os.path.exists(folder_path):
+    #             os.makedirs(folder_path)
+    #         file_a = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name, 'File A.pdf')
+    #         file_b = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name, 'File B.pdf')
+    #         shutil.copy(file_a_dir, file_a)
+    #         shutil.copy(file_b_dir, file_b)
+    #         pages = PDFTools_v2.page_count(file_a)
+    #         print(pages)
+    #         flatten_pdf(file_b, file_b)
+    #         open_in_bluebeam(file_a)
+    #         sleep('time_open_FileA',pages)
+    #         open_in_bluebeam(file_b)
+    #         sleep('time_open_FileB',pages)
+    #         sim = Simulator()
+    #         keyboard.press_and_release(keyboard_division)
+    #         sleep('time_division',pages)
+    #         sim.click_at(position_doc_1)
+    #         sleep('time_change2FileA',pages)
+    #         keyboard.press_and_release(keyboard_tofirstpage)
+    #         sleep('time_change2fisrtpage',pages)
+    #         sim.click_at(position_full_page)
+    #         sleep('time_fullpage',pages)
+    #         if color!=None:
+    #             sim.click_at(position_right)
+    #             sim.click_at(position_colorprocess)
+    #             sleep('time_normalwait',pages)
+    #             sim.click_at(position_color_screen)
+    #             sim.click_at(position_colorize)
+    #             sim.click_at(position_selectcolor)
+    #             if color=='#FF0000':
+    #                 sim.click_at(position_color_red)
+    #             elif color == '#00FFFF':
+    #                 sim.click_at(position_color_cyan)
+    #             elif color == '#008000':
+    #                 sim.click_at(position_color_green)
+    #             elif color == '#FFAA00':
+    #                 sim.click_at(position_color_orange)
+    #             elif color == '#AA00FF':
+    #                 sim.click_at(position_color_purple)
+    #             elif color == '#0000FF':
+    #                 sim.click_at(position_color_blue)
+    #             elif color == '#808000':
+    #                 sim.click_at(position_color_dark_green)
+    #             elif color == '#FF6600':
+    #                 sim.click_at(position_color_dark_orange)
+    #             sim.click_at(position_color_processimage)
+    #             sim.click_at(position_color_ok)
+    #             sleep('time_changecolor',pages)
+    #         sim.click_at(position_left)
+    #         sim.click_at(position_layer)
+    #         sim.click_at(position_addlayer)
+    #         insert_word('None-'+str(datetime.now().strftime("%Y%m%d%H%M%S")))
+    #         sleep('time_normalwait',pages)
+    #         keyboard.press_and_release(keyboard_enter)
+    #         sleep('time_normalwait',pages)
+    #         sim.right_click_at(position_addlayer_fromfirstlayer[0])
+    #         sleep('time_normalwait',pages)
+    #         sim.move_to(position_addlayer_fromfirstlayer[1])
+    #         sleep('time_normalwait',pages)
+    #         sim.click_at(position_addlayer_fromfirstlayer[2])
+    #         sleep('time_normalwait',pages)
+    #         insert_word(service_type)
+    #         sleep('time_normalwait',pages)
+    #         keyboard.press_and_release(keyboard_enter)
+    #         sleep('time_normalwait',pages)
+    #         for i in range(pages):
+    #             sim.click_at(position_right)
+    #             keyboard.press_and_release(keyboard_snapshot)
+    #             sleep('time_normalwait',pages)
+    #             for j in range(4):
+    #                 sim.click_at(point_boundary_right_4[j])
+    #             sleep('time_normalwait',pages)
+    #             keyboard.press_and_release(keyboard_enter)
+    #             sleep('time_screenshot',pages)
+    #             keyboard.press_and_release(keyboard_esc)
+    #             sleep('time_normalwait',pages)
+    #             sim.click_at(position_left)
+    #             keyboard.press_and_release(keyboard_past2sameloc)
+    #             sleep('time_paste2sameposition',pages)
+    #             sim.click_at(position_opacity)
+    #             keyboard.press_and_release('delete')
+    #             sleep('time_normalwait',pages)
+    #             keyboard.press_and_release('delete')
+    #             sleep('time_normalwait',pages)
+    #             keyboard.press_and_release('delete')
+    #             sleep('time_normalwait',pages)
+    #             keyboard.press_and_release('5')
+    #             sleep('time_normalwait',pages)
+    #             keyboard.press_and_release('0')
+    #             sleep('time_normalwait',pages)
+    #             keyboard.press_and_release(keyboard_enter)
+    #             sleep('time_changeopcacity',pages)
+    #
+    #             sim.click_at(position_blend)
+    #             time.sleep(0.5)
+    #             sim.click_at(position_darken)
+    #             time.sleep(0.5)
+    #
+    #             sim.right_click_at(position_add2layer[0])
+    #             sleep('time_normalwait',pages)
+    #             sim.move_to(position_add2layer[1])
+    #             sleep('time_normalwait',pages)
+    #             sim.move_to(position_add2layer[2])
+    #             sleep('time_normalwait',pages)
+    #             sim.click_at(position_add2layer[3])
+    #             sleep('time_add2layer',pages)
+    #             if color == None:
+    #                 keyboard.press_and_release(keyboard_esc)
+    #                 sleep('time_normalwait', pages)
+    #                 sim.click_at(position_left)
+    #                 sleep('time_normalwait', pages)
+    #                 sim.click_at(position_order)
+    #                 sleep('time_normalwait', pages)
+    #
+    #
+    #             if i < pages - 1:
+    #                 keyboard.press_and_release(keyboard_tonextpage)
+    #                 sleep('time_nextpage',pages)
+    #             else:
+    #                 sim.click_at(position_left)
+    #                 keyboard.press_and_release(keyboard_save)
+    #                 sleep('time_save',pages)
+    #                 sim.click_at(position_right)
+    #                 keyboard.press_and_release(keyboard_save)
+    #                 sleep('time_save',pages)
+    #                 sim.click_at(position_close)
+    #         sleep('time_normalwait',pages)
+    #         shutil.copy(file_a,file_c_dir)
+    #         sleep('time_normalwait',pages)
+    #         if file_d_dir!='':
+    #             open_in_bluebeam(file_a)
+    #             sleep('time_open_FileB', pages)
+    #             keyboard.press_and_release(keyboard_tofirstpage)
+    #             sleep('time_change2fisrtpage', pages)
+    #             sim.click_at(position_full_page)
+    #             sleep('time_fullpage', pages)
+    #             for i in range(pages):
+    #                 sim.click_at(position_left)
+    #                 sleep('time_normalwait', pages)
+    #                 sim.click_at(position_piccolorchange)
+    #                 sim.click_at(position_color_screen)
+    #                 sim.click_at(position_grayscale)
+    #                 sim.click_at(position_color_processimage)
+    #                 keyboard.press_and_release(keyboard_enter)
+    #                 sleep('time_changeopcacity',pages)
+    #                 if i < pages - 1:
+    #                     sim.click_at(position_left)
+    #                     keyboard.press_and_release(keyboard_tonextpage)
+    #                     sleep('time_nextpage',pages)
+    #                 else:
+    #                     sim.click_at(position_left)
+    #                     keyboard.press_and_release(keyboard_save)
+    #                     sleep('time_save',pages)
+    #                     sim.click_at(position_close)
+    #             sleep('time_normalwait',pages)
+    #             shutil.copy(file_a,file_d_dir)
+    #             sleep('time_normalwait',pages)
+    #         os.rename(folder_dir, folder_dir+'-finished')
+    #     except:
+    #         traceback.print_exc()
     @staticmethod
     def overlay(folder_dir):
-        try:
-            with open(os.path.join(folder_dir,'file_names_overlay.txt'), 'r', encoding='utf-8') as file:
-                file_content = file.read()
-                content = ast.literal_eval(file_content)
-            file_a_dir = content['File1']
-            file_b_dir = content['File2']
-            file_c_dir = content['File3']
-            file_d_dir = content['File4']
-            color=content['Color']
-            layer_name=content['Name']
-            service_type=layer_name
-            folder_path = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name)
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
-            file_a = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name, 'File A.pdf')
-            file_b = os.path.join(r'C:\Copilot_tmp', Path(folder_dir).name, 'File B.pdf')
-            shutil.copy(file_a_dir, file_a)
-            shutil.copy(file_b_dir, file_b)
-            pages = PDFTools_v2.page_count(file_a)
-            print(pages)
-            flatten_pdf(file_b, file_b)
-            open_in_bluebeam(file_a)
-            sleep('time_open_FileA',pages)
-            open_in_bluebeam(file_b)
-            sleep('time_open_FileB',pages)
-            sim = Simulator()
-            keyboard.press_and_release(keyboard_division)
-            sleep('time_division',pages)
-            sim.click_at(position_doc_1)
-            sleep('time_change2FileA',pages)
-            keyboard.press_and_release(keyboard_tofirstpage)
-            sleep('time_change2fisrtpage',pages)
-            sim.click_at(position_full_page)
-            sleep('time_fullpage',pages)
-            if color!=None:
-                sim.click_at(position_right)
-                sim.click_at(position_colorprocess)
-                sleep('time_normalwait',pages)
-                sim.click_at(position_color_screen)
-                sim.click_at(position_colorize)
-                sim.click_at(position_selectcolor)
-                if color=='#FF0000':
-                    sim.click_at(position_color_red)
-                elif color == '#00FFFF':
-                    sim.click_at(position_color_cyan)
-                elif color == '#008000':
-                    sim.click_at(position_color_green)
-                elif color == '#FFAA00':
-                    sim.click_at(position_color_orange)
-                elif color == '#AA00FF':
-                    sim.click_at(position_color_purple)
-                elif color == '#0000FF':
-                    sim.click_at(position_color_blue)
-                elif color == '#808000':
-                    sim.click_at(position_color_dark_green)
-                elif color == '#FF6600':
-                    sim.click_at(position_color_dark_orange)
-                sim.click_at(position_color_processimage)
-                sim.click_at(position_color_ok)
-                sleep('time_changecolor',pages)
-            sim.click_at(position_left)
-            sim.click_at(position_layer)
-            sim.click_at(position_addlayer)
-            insert_word('None-'+str(datetime.now().strftime("%Y%m%d%H%M%S")))
-            sleep('time_normalwait',pages)
-            keyboard.press_and_release(keyboard_enter)
-            sleep('time_normalwait',pages)
-            sim.right_click_at(position_addlayer_fromfirstlayer[0])
-            sleep('time_normalwait',pages)
-            sim.move_to(position_addlayer_fromfirstlayer[1])
-            sleep('time_normalwait',pages)
-            sim.click_at(position_addlayer_fromfirstlayer[2])
-            sleep('time_normalwait',pages)
-            insert_word(service_type)
-            sleep('time_normalwait',pages)
-            keyboard.press_and_release(keyboard_enter)
-            sleep('time_normalwait',pages)
-            for i in range(pages):
-                sim.click_at(position_right)
-                keyboard.press_and_release(keyboard_snapshot)
-                sleep('time_normalwait',pages)
-                for j in range(4):
-                    sim.click_at(point_boundary_right_4[j])
-                sleep('time_normalwait',pages)
-                keyboard.press_and_release(keyboard_enter)
-                sleep('time_screenshot',pages)
-                keyboard.press_and_release(keyboard_esc)
-                sleep('time_normalwait',pages)
-                sim.click_at(position_left)
-                keyboard.press_and_release(keyboard_past2sameloc)
-                sleep('time_paste2sameposition',pages)
-                sim.click_at(position_opacity)
-                keyboard.press_and_release('delete')
-                sleep('time_normalwait',pages)
-                keyboard.press_and_release('delete')
-                sleep('time_normalwait',pages)
-                keyboard.press_and_release('delete')
-                sleep('time_normalwait',pages)
-                keyboard.press_and_release('5')
-                sleep('time_normalwait',pages)
-                keyboard.press_and_release('0')
-                sleep('time_normalwait',pages)
-                keyboard.press_and_release(keyboard_enter)
-                sleep('time_changeopcacity',pages)
+        with open(os.path.join(folder_dir, 'file_names_overlay.json'), 'r') as f:
+            data = json.load(f)
+        arch_drawing = data["arch_drawing"]
+        mech_drawing = data["mech_drawing"]
+        output_path = os.path.join(Path(arch_drawing).parent, f"{date.today().strftime('%Y%m%d')}-Overlay.pdf")
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        pages = PDFTools_v2.page_count(arch_drawing)
+        sleep('time_normalwait', pages)
+        open_in_bluebeam(arch_drawing)
+        sleep('time_open_FileB', pages)
+        open_in_bluebeam(mech_drawing)
+        sleep('time_open_FileA', pages)
+        sim = Simulator()
+        sim.click_at(position_overlay)
+        sleep('time_normalwait', 1)
+        sim.double_click_at(position_overlay_file_b)
+        sleep('time_normalwait', 1)
+        sim.double_click_at(position_overlay_opacity)
+        sleep('time_normalwait', 1)
+        insert_word("50")
+        sleep('time_normalwait', 1)
+        sim.click_at(position_overlay_opacity)
+        sleep('time_normalwait', 1)
+        sim.click_at(position_overlay_opacity_ok)
+        sleep('time_normalwait', 1)
+        sim.click_at(position_overlay_ok)
+        sleep("time_overlay", pages)
+        keyboard.press_and_release(keyboard_save)
+        sleep('time_normalwait', 1)
+        pyperclip.copy(output_path)
+        keyboard.press_and_release(keyboard_paste)
+        sleep('time_normalwait', 1)
+        keyboard.press_and_release(keyboard_enter)
+        sleep('time_normalwait', 1)
+        sim.click_at(position_close)
+        sleep('time_normalwait', 1)
+        os.rename(folder_dir, folder_dir + '-finished')
 
-                sim.click_at(position_blend)
-                time.sleep(0.5)
-                sim.click_at(position_darken)
-                time.sleep(0.5)
-
-                sim.right_click_at(position_add2layer[0])
-                sleep('time_normalwait',pages)
-                sim.move_to(position_add2layer[1])
-                sleep('time_normalwait',pages)
-                sim.move_to(position_add2layer[2])
-                sleep('time_normalwait',pages)
-                sim.click_at(position_add2layer[3])
-                sleep('time_add2layer',pages)
-                if color == None:
-                    keyboard.press_and_release(keyboard_esc)
-                    sleep('time_normalwait', pages)
-                    sim.click_at(position_left)
-                    sleep('time_normalwait', pages)
-                    sim.click_at(position_order)
-                    sleep('time_normalwait', pages)
-
-
-                if i < pages - 1:
-                    keyboard.press_and_release(keyboard_tonextpage)
-                    sleep('time_nextpage',pages)
-                else:
-                    sim.click_at(position_left)
-                    keyboard.press_and_release(keyboard_save)
-                    sleep('time_save',pages)
-                    sim.click_at(position_right)
-                    keyboard.press_and_release(keyboard_save)
-                    sleep('time_save',pages)
-                    sim.click_at(position_close)
-            sleep('time_normalwait',pages)
-            shutil.copy(file_a,file_c_dir)
-            sleep('time_normalwait',pages)
-            if file_d_dir!='':
-                open_in_bluebeam(file_a)
-                sleep('time_open_FileB', pages)
-                keyboard.press_and_release(keyboard_tofirstpage)
-                sleep('time_change2fisrtpage', pages)
-                sim.click_at(position_full_page)
-                sleep('time_fullpage', pages)
-                for i in range(pages):
-                    sim.click_at(position_left)
-                    sleep('time_normalwait', pages)
-                    sim.click_at(position_piccolorchange)
-                    sim.click_at(position_color_screen)
-                    sim.click_at(position_grayscale)
-                    sim.click_at(position_color_processimage)
-                    keyboard.press_and_release(keyboard_enter)
-                    sleep('time_changeopcacity',pages)
-                    if i < pages - 1:
-                        sim.click_at(position_left)
-                        keyboard.press_and_release(keyboard_tonextpage)
-                        sleep('time_nextpage',pages)
-                    else:
-                        sim.click_at(position_left)
-                        keyboard.press_and_release(keyboard_save)
-                        sleep('time_save',pages)
-                        sim.click_at(position_close)
-                sleep('time_normalwait',pages)
-                shutil.copy(file_a,file_d_dir)
-                sleep('time_normalwait',pages)
-            os.rename(folder_dir, folder_dir+'-finished')
-        except:
-            traceback.print_exc()
 
     @staticmethod
     def lumicolor(folder_dir):
@@ -863,7 +917,7 @@ while True:
                             Simulator.erase_content(os.path.join(folder_dir,folder))
                         elif os.path.exists(os.path.join(folder_dir,folder,'file_names_setupdrawing.txt')):
                             Simulator.setup_drawing(os.path.join(folder_dir,folder))
-                        elif os.path.exists(os.path.join(folder_dir,folder,'file_names_overlay.txt')):
+                        elif os.path.exists(os.path.join(folder_dir,folder,'file_names_overlay.json')):
                             Simulator.overlay(os.path.join(folder_dir, folder))
                         elif os.path.exists(os.path.join(folder_dir,folder,'file_names_lumicolor.txt')):
                             Simulator.lumicolor(os.path.join(folder_dir, folder))

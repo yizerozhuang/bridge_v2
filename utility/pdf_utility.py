@@ -528,7 +528,7 @@ def grays_scale_pdf_multiprocessing(pool, input_file):
     shutil.rmtree(output_dir)
 
 
-def align_multiprocessing(pool, sketch_dir):
+def align_multiprocessing(pool, sketch_dir, first_coordinate=None):
     template_folder = conf["c_temp_dir"]
     shutil.copy(sketch_dir, template_folder)
     sketch_dir2 = os.path.join(template_folder, Path(sketch_dir).name)
@@ -555,10 +555,10 @@ def align_multiprocessing(pool, sketch_dir):
                 "height": float(markups[first_key]["height"])
             }
         )
-        first_coordinate = coordinate_list[0]
+        first_coordinate = coordinate_list[0] if first_coordinate is None else first_coordinate
         reader_pages = split_pdf(sketch_dir2, output_dir)
         output_dirs = [os.path.join(output_dir, "{}.pdf".format(page, )) for page in range(reader_pages)]
-        for _ in pool.imap_unordered(_align_page, list(zip(output_dirs, coordinate_list, [first_coordinate] * reader_pages))[1:]):
+        for _ in pool.imap_unordered(_align_page, list(zip(output_dirs, coordinate_list, [first_coordinate] * reader_pages))):
             pass
         combine_pdf(output_dirs, sketch_dir2 + ".tmp.pdf")
         if os.path.exists(sketch_dir2):
@@ -788,18 +788,6 @@ def svg_set_opacity_multicolor(input_svg, pre_colors, output_path):
 
 
 def pdf_move_center_per_page(pdf_file, paper_size, output_page):
-    if paper_size == 'A3':
-        center_point = [13.91296, 14.40692, 1161.803, 724.2948]
-    elif paper_size == 'A1':
-        center_point = [51.49623, 39.79395, 2270.485, 1476.798]
-    else:
-        center_point = [50.58789, 39.68091, 3257.938, 2177.293]
-    for i in range(1, PDFTools_v2.page_count(pdf_file)+1):
-        markups = PDFTools_v2.return_markup_by_page(pdf_file, i)
-        markups = PDFTools_v2.filter_markup_by(markups, {"subject": "Rectangle", "color": "#7C0000"})
-        assert len(markups) > 0, f"Page {i} don't have any rectangular"
-        assert len(markups) == 1, f"Page {i} have more than one rectangular"
-
     for i in range(1, PDFTools_v2.page_count(pdf_file) + 1):
         pass
 def pdf_move_center(pdf_file, paper_size):
@@ -814,7 +802,6 @@ def pdf_move_center(pdf_file, paper_size):
     markups = PDFTools_v2.return_markup_by_page(pdf_file, 1)
     #retangular
     markups = PDFTools_v2.filter_markup_by(markups, {"subject":"Rectangle", "color": "#7C0000"})
-    assert len(markups) == 1, "every pages should have only one rectangle"
     markup_rect = list(markups.items())[0]
     coordinate = (float(markup_rect[1]['x']) + float(markup_rect[1]['width']) / 2,
                   float(markup_rect[1]['y']) + float(markup_rect[1]['height']) / 2)
@@ -845,7 +832,7 @@ def insert_logo_into_pdf(pdf_path, image_path, page_number, orientation, paper_s
         if paper_size == 'A3':
             rec_x = 670
             rec_y = 15
-            rec_width = 95
+            rec_width = 80
             rec_height = 75
         elif paper_size == 'A1':
             rec_x = 966
@@ -868,7 +855,7 @@ def insert_logo_into_pdf(pdf_path, image_path, page_number, orientation, paper_s
             rec_x = 742
             rec_y = 670
             rec_width = 75
-            rec_height = 95
+            rec_height = 80
         elif paper_size == 'A1':
             rec_x = 1530
             rec_y = 966
@@ -944,8 +931,23 @@ def resize_pdf(input_file, input_scale, input_size_x, input_size_y, output_scale
 
         if content_scale_x != 1 or content_scale_y != 1:
             page.add_transformation(op)
+            _move_to_center(page, input_size_x, input_size_y, output_size_x, output_size_y)
         writer.add_page(page)
     writer.write(output_dir)
+
+def _move_to_center(page, input_size_x, input_size_y, output_size_x, output_size_y):
+    translation_x = (output_size_x - input_size_x) / 2
+    translation_y = (output_size_y - input_size_y) / 2
+    assert page.rotation in [0, 90, 180, 270]
+    if page.rotation == 0:
+        op = Transformation().translate(translation_x, translation_y)
+    elif page.rotation == 90:
+        op = Transformation().translate(- translation_y, translation_x)
+    elif page.rotation == 180:
+        op = Transformation().translate(- translation_x, - translation_y)
+    else:
+        op = Transformation().translate(translation_y, - translation_x)
+    page.add_transformation(op)
 
 
 def replace_string(string, replacement):
@@ -1006,8 +1008,8 @@ def _align_page(args):
         comments = '{"x":"%.2f","y":"%.2f"}' % (first_coordinate["x"], first_coordinate["y"])
         print(comments)
         commands = [
-            "Open('{}')".format(input_file),
-            "MarkupSet(1, '{}', '{}')".format(coordinate_i["markup_id"], comments),
+            f"Open('{input_file}')",
+            f"MarkupSet(1, '{coordinate_i['markup_id']}', '{comments}')",
             "Save()",
             "Close()",
         ]
@@ -1156,8 +1158,6 @@ def compress_directory_to_zip(zip_filename, dir_to_zip):
 
 
 def page_delete(input_pdf, output_pdf, n):
-
-    #TODO: fix this function
     try:
         reader = PdfReader(input_pdf)
         writer = PdfWriter()

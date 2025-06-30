@@ -309,11 +309,35 @@ class PDFTools:
         for markup_id, cont in markup_ids_dict.items():
             command.append("MarkupSet({}, '{}', '{}')".format(i, markup_id, json.dumps(cont)))
         command.extend(["Save()", "Close()"])
-        logger.info("paste_markup for page {} Complete.".format(i))
+        logger.info(f"set_markup for page {i} Complete.")
         with open("set_markup.bci", 'w') as f:
             f.write('\n'.join(command))
         _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('set_markup.bci')"])
         os.remove("set_markup.bci")
+
+    @staticmethod
+    def delete_markup(file_dir, i, markup_id):
+        command = [f"Open('{file_dir}')"]
+        command.append(f"MarkupDelete({i}, '{markup_id}')")
+        command.extend(["Save()", "Close()"])
+        with open("delete_markup.bci", 'w') as f:
+            f.write('\n'.join(command))
+        _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('delete_markup.bci')"])
+        logger.info(f"delete_markup for page {i} Complete.")
+        os.remove("delete_markup.bci")
+
+    @staticmethod
+    def colorize(file_dir, color):
+        command = [f"Open('{file_dir}')"]
+        command.append(f"ColorProcess('{color}', 'white', true, true)")
+        command.extend(["Save()", "Close()"])
+        with open("colorize.bci", 'w') as f:
+            f.write('\n'.join(command))
+        _ = subprocess.check_output([PDFTools.BLUEBEAM_ENGINE_DIR, "Script('colorize.bci')"])
+        logger.info(f"colorize for page Complete.")
+        os.remove("colorize.bci")
+    # @staticmethod
+    # def delete_rectangular():
 
     @staticmethod
     def get_page_size(file_dir, i):
@@ -331,7 +355,6 @@ class PDFTools:
 
     @staticmethod
     def get_page_rotate(file_dir, i):
-        #TODO: raise error or deal with it when the rotate is not the same for pages
         command = [f"Open('{file_dir}')"]
         command.extend([f"PageRotateGet({i})"])
         command.extend(["Save()", "Close()"])

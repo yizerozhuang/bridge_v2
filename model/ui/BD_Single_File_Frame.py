@@ -6,6 +6,7 @@ from utility.global_variables import current_folder_address
 class BD_Single_File_Frame(BD_Base_Frame):
     def __init__(self, app, qt_line_edit: QLineEdit, qt_text_edit: QTextEdit, qt_push_button: QPushButton):
         super().__init__(app)
+        #Todo remove line_edit
 
         self.line_edit = qt_line_edit
         self.text_edit = qt_text_edit

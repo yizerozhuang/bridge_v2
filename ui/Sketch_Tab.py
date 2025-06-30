@@ -31,6 +31,8 @@ class Sketch_Tab(BD_Base_Frame):
         super().__init__(app)
         self.rescale_tab()
         self.align_tab()
+
+        self.tool_box = self.ui.rescale_tool_box
         # self.markup_tab()
         # self.checklist_tab()
 
@@ -50,17 +52,17 @@ class Sketch_Tab(BD_Base_Frame):
         return self.rescale_original_scale_radio_button_window.get_selection_value()
     @property
     def input_size(self):
-        return self.rescale_original_scale_radio_button_window.get_selection_text().split("(")[0]
+        return self.rescale_original_size_radio_button_window.get_selection_text().split("(")[0]
     @property
     def input_size_x(self):
         if self.rescale_original_size_radio_button_window.get_selection_value()[0] == "":
             return 0
-        return convert_mm_to_pixel(self.rescale_original_size_radio_button_window.get_selection_value()[0])
+        return convert_mm_to_pixel(float(self.rescale_original_size_radio_button_window.get_selection_value()[0]))
     @property
     def input_size_y(self):
         if self.rescale_original_size_radio_button_window.get_selection_value()[1] == "":
             return 0
-        return convert_mm_to_pixel(self.rescale_original_size_radio_button_window.get_selection_value()[1])
+        return convert_mm_to_pixel(float(self.rescale_original_size_radio_button_window.get_selection_value()[1]))
     @property
     def output_scale(self):
         return self.rescale_output_scale_radio_button_window.get_selection_value()
@@ -71,21 +73,21 @@ class Sketch_Tab(BD_Base_Frame):
     def output_size_x(self):
         if self.rescale_output_size_radio_button_window.get_selection_value()[0] == "":
             return 0
-        return convert_mm_to_pixel(self.rescale_output_size_radio_button_window.get_selection_value()[0])
+        return convert_mm_to_pixel(float(self.rescale_output_size_radio_button_window.get_selection_value()[0]))
     @property
     def output_size_y(self):
         if self.rescale_output_size_radio_button_window.get_selection_value()[1] == "":
             return 0
-        return convert_mm_to_pixel(self.rescale_output_size_radio_button_window.get_selection_value()[1])
+        return convert_mm_to_pixel(float(self.rescale_output_size_radio_button_window.get_selection_value()[1]))
     # @property
     # def selected_colors(self):
     #     return generate_possible_colors(self.color_window.get_selected_colors())
     @property
-    def luminocity_checked(self):
-        return self.sketch_align_check_box_luminocity.isChecked()
+    def luminosity_checked(self):
+        return self.sketch_align_check_box_luminosity.isChecked()
     @property
-    def luminocity_value(self):
-        return self.sketch_align_line_edit_luminocity.text()
+    def luminosity_value(self):
+        return self.sketch_align_line_edit_luminosity.text()
     @property
     def selected_floors(self):
         return self.floor_table.get_current_content()
@@ -139,16 +141,8 @@ class Sketch_Tab(BD_Base_Frame):
     def rescale(self):
         move_file_to_ss(self.output_dir, os.path.join(self.app.current_folder_address, "SS"))
 
-        if self.input_scale == self.output_scale and self.input_size_x == self.output_size_x and self.input_size_y == self.output_size_y:
-            shutil.copy(self.input_file_dir, self.output_dir)
-            self.rescale_success()
-            return
-        original_input_size_x, original_input_size_y = get_pdf_page_sizes(self.input_file_dir)
-        if round(original_input_size_x, 2) != self.input_size_x or round(original_input_size_y, 2) != self.input_size_y:
-            raise ValueError(f"The input size is not {self.input_size}")
-
         process = BD_Rescale_Process("Rescaling, open in Bluebeam when done.", self.ui, self.input_file_dir,
-                                     self.input_scale, self.input_size_x, self.input_size_y,
+                                     self.input_scale, self.input_size, self.input_size_x, self.input_size_y,
                                      self.output_scale, self.output_size_x, self.output_size_y, self.output_dir)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.rescale_success)
@@ -161,7 +155,7 @@ class Sketch_Tab(BD_Base_Frame):
         self.sketch_align_line_edit_paper_size.setText(self.output_size)
         # self.color_window.set_total_pages_number(self.page_number)
         # self.table_window.set_current_folder(self.app.current_folder_address)
-        self.ui.toolBox.setCurrentIndex(1)
+        self.tool_box.setCurrentIndex(1)
 
     def align_tab(self):
         self.sketch_align_line_edit_current_page = self.ui.sketch_align_line_edit_current_page
@@ -179,13 +173,13 @@ class Sketch_Tab(BD_Base_Frame):
         #     self.ui.sketch_align_frame_source_color_to,
         #     self.ui.sketch_align_label_before,
         #     self.ui.sketch_align_label_after,
-        #     self.ui.sketch_align_check_box_luminocity,
-        #     self.ui.sketch_align_line_edit_luminocity,
+        #     self.ui.sketch_align_check_box_luminosity,
+        #     self.ui.sketch_align_line_edit_luminosity,
         #     self.ui.sketch_align_check_box_grayscale,
         #     self.ui.sketch_align_check_box_add_tags
         # )
-        self.sketch_align_check_box_luminocity = self.ui.sketch_align_check_box_luminocity
-        self.sketch_align_line_edit_luminocity = self.ui.sketch_align_line_edit_luminocity
+        self.sketch_align_check_box_luminosity = self.ui.sketch_align_check_box_luminosity
+        self.sketch_align_line_edit_luminosity = self.ui.sketch_align_line_edit_luminosity
         self.sketch_align_check_box_grayscale = self.ui.sketch_align_check_box_grayscale
         self.sketch_align_check_box_add_tags = self.ui.sketch_align_check_box_add_tags
         self.sketch_align_push_button_process = self.ui.sketch_align_push_button_process
@@ -194,7 +188,7 @@ class Sketch_Tab(BD_Base_Frame):
 
     def align(self):
 
-        assert self.luminocity_value.isdigit() and 0<float(self.luminocity_value)<1, "The luminocity value is incorrect"
+        assert 0<float(self.luminosity_value)<1, "The luminosity value is incorrect"
 
         process = BD_Align_Process("Aligning Sketch, open in Bluebeam when done.", self.ui, self.output_dir)
         process.error_occurred.connect(self.handle_thread_error)
@@ -203,9 +197,9 @@ class Sketch_Tab(BD_Base_Frame):
 
     def color_modify(self):
         # process = BD_Color_Process("Modifying color and changing luminosity, open in Bluebeam when done.", self.ui, self.output_dir,
-        #                            self.page_number, self.selected_colors, self.luminocity_checked, self.luminocity_value)
+        #                            self.page_number, self.selected_colors, self.luminosity_checked, self.luminosity_value)
         process = BD_Color_Process("Modifying color and changing luminosity, open in Bluebeam when done.", self.ui, self.output_dir,
-                                   self.page_number, self.luminocity_checked, self.luminocity_value)
+                                   self.page_number, self.luminosity_checked, self.luminosity_value)
         if not process.is_available():
             if messagebox('Waiting confirm', 'Someone is doing a task, do you want to wait?', self.ui):
                 wait_process = BD_Wait_Process(
@@ -227,7 +221,7 @@ class Sketch_Tab(BD_Base_Frame):
 
     def process_success(self):
         open_in_bluebeam(self.output_dir)
-        self.ui.toolBox.setCurrentIndex(2)
+        self.tool_box.setCurrentIndex(2)
 
     def markup_tab(self):
         # self.table_window = BD_Single_Table_Frame(
@@ -250,7 +244,7 @@ class Sketch_Tab(BD_Base_Frame):
 
     def copy_success(self):
         open_in_bluebeam(self.output_dir)
-        self.ui.toolBox.setCurrentIndex(3)
+        self.tool_box.setCurrentIndex(3)
 
     def checklist_tab(self):
         self.sketch_checklist_push_button = self.ui.sketch_checklist_push_button

@@ -14,6 +14,10 @@ def get_all_the_table_names():
     cursor.execute("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA='bridge'")
     return cursor.fetchall()
 
+def get_cursor_description():
+    #should use this after get values
+    return [description[0] for description in cursor.description]
+
 def get_number_of_columns_of_table(table_name):
     cursor.execute(f"SELECT count(*) FROM information_schema.columns WHERE table_name='{table_name}'")
     return cursor.fetchone()[0]

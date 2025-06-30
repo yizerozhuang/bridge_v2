@@ -38,7 +38,7 @@ class Drawing_Tab(BD_Base_Frame):
             self.ui.drawing_push_button_open_folder,
             self.ui.drawing_table_input_files
         )
-        self.input_file_table_windows.table.itemDoubleClicked.connect(self.on_table_item_double_click)
+        self.input_file_table_windows.table.currentCellChanged.connect(self.on_table_item_cell_changed)
         self.drawing_line_edit_drawn_by = self.ui.drawing_line_edit_drawn_by
         self.drawing_line_edit_check_by = self.ui.drawing_line_edit_check_by
         self.template_types_radio_button_windows = BD_Radio_Button_Frame(
@@ -49,9 +49,7 @@ class Drawing_Tab(BD_Base_Frame):
         self.service_types_radio_button_windows = BD_Radio_Button_Frame(
             self.app,
             [getattr(self.ui, f"drawing_radio_button_{type}") for type in Drawing_Tab.service_types],
-            Drawing_Tab.service_types,
-            self.ui.drawing_radio_button_custom,
-            self.ui.drawing_line_edit_custom
+            Drawing_Tab.service_types
         )
 
         self.drawing_line_edit_current_page = self.ui.drawing_line_edit_current_page
@@ -87,7 +85,7 @@ class Drawing_Tab(BD_Base_Frame):
         return os.path.join(self.app.current_folder_address, f"{self.app.project_name}-{self.service} Drawings.pdf")
     @property
     def template_dir(self):
-        return os.path.join(Drawing_Tab.template_folder, self.service, f"{self.paper_size}-{self.template_type}-{self.scale}-{self.sketch_dir_orientation}-template.pdf")
+        return os.path.join(Drawing_Tab.template_folder, self.service, f"{self.paper_size}-{self.scale}-{self.sketch_dir_orientation}-template.pdf")
     @property
     def cover_page_dir(self):
         return os.path.join(Drawing_Tab.template_folder, self.service, f"{self.paper_size}-{self.template_type}-{self.scale}-{self.sketch_dir_orientation}-cover page.pdf")
@@ -97,6 +95,15 @@ class Drawing_Tab(BD_Base_Frame):
     @property
     def sketch_dir(self):
         return self.input_file_table_windows.get_current_item_path()
+    @property
+    def logo_dir(self):
+        return os.path.join(self.app.current_folder_address, "SS", "logo.png")
+    @sketch_dir.setter
+    def sketch_dir(self, app):
+        for i in range(self.input_file_table_windows.get_row_count()):
+            if self.input_file_table_windows.get_value(i) == f"{app.project_name}-Mechanical Sketch.pdf":
+                self.input_file_table_windows.set_current_cell(i)
+                return
     @property
     def sketch_dir_rotation(self):
         if self.sketch_dir is None:
@@ -135,11 +142,13 @@ class Drawing_Tab(BD_Base_Frame):
     @property
     def project_name(self):
         return self.app.project_name.upper()
-    def on_table_item_double_click(self):
+    def on_table_item_cell_changed(self):
         file_path = self.input_file_table_windows.get_current_item_path()
         if file_path.endswith(".pdf"):
             page_numbers = get_pdf_page_numbers(file_path)
             self.drawing_line_edit_total_page.setText(str(page_numbers))
+        else:
+            self.drawing_line_edit_total_page.setText("")
 
     def on_cell_changed(self):
         #TODO: appending new floor should not effect previous floor
@@ -154,19 +163,26 @@ class Drawing_Tab(BD_Base_Frame):
 
 
     def move_to_center(self):
-        assert self.sketch_pages == self.current_pages
+        assert isinstance(self.sketch_pages, int) and self.sketch_pages > 0, "You should double click the sketch on the table"
+        assert self.sketch_pages == self.current_pages, f"The sketch has {self.sketch_pages} but you only select {self.current_pages} plans"
         assert self.paper_size in ['A3','A1','A0'], f"the paper size {self.paper_size} is not a valid paper size"
         for i in range(1, PDFTools.page_count(self.sketch_dir) + 1):
             markups = PDFTools.return_markup_by_page(self.sketch_dir, i)
             markups = PDFTools.filter_markup_by(markups, {"subject": "Rectangle", "color": "#7C0000"})
             assert len(markups) > 0, f"Page {i} don't have any rectangular"
             assert len(markups) == 1, f"Page {i} have more than one rectangular"
+        if self.logo_label.is_image_included():
+            self.logo_label.save_image(self.logo_dir)
+
+        assert os.path.exists(self.template_dir), f"Could not find the template {self.template_dir}"
+        assert os.path.exists(self.cover_page_dir), f"Count not find the cover page {self.cover_page_dir}"
+
 
         move_file_to_ss(self.output_dir, os.path.join(self.app.current_folder_address, "SS"))
         shutil.copy(self.template_dir, self.output_dir)
         duplicate_page(self.template_dir, self.output_dir, self.sketch_pages)
 
-        # process = BD_Move_To_Center_Process("Moving sketch to paper center.", self.ui, sketch_dir, paper_size)
+        # process = BD_Move_To_Center_Process("Moving sketch to paper center.", self.ui, self.sketch_dir, self.paper_size)
         # process.error_occurred.connect(self.handle_thread_error)
         # process.process_finished.connect(self.set_up_drawing)
         # process.start_process()
@@ -214,12 +230,14 @@ class Drawing_Tab(BD_Base_Frame):
         process.start_process()
 
     def paste_logo(self):
-        if not self.logo_label.is_image_included():
+        # if not self.logo_label.is_image_included():
+        #     self.set_up_success()
+        #     return
+        # logo_dir = os.path.join(conf["c_temp_dir"], "logo.png")
+        # self.logo_label.save_image(logo_dir)
+        if not os.path.exists(self.logo_dir):
             self.set_up_success()
             return
-        logo_dir = os.path.join(conf["c_temp_dir"], "logo.png")
-
-        self.logo_label.save_image(logo_dir)
         process = BD_Paste_Logo_Process("Setting client logo, open in Bluebeam when done.", self.ui, self.output_dir, self.paper_size, self.sketch_dir_orientation, logo_dir)
         process.error_occurred.connect(self.handle_thread_error)
         process.process_finished.connect(self.set_up_success)
@@ -233,4 +251,5 @@ class Drawing_Tab(BD_Base_Frame):
     #     process.start_process()
 
     def set_up_success(self):
+        move_file_to_ss(self.sketch_dir, os.path.join(self.app.current_folder_address, "SS"))
         open_in_bluebeam(self.output_dir)
